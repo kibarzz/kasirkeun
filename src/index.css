@@ -1,29 +1,3 @@
 @import "tailwindcss";
 
-@theme {
-  --color-slate-900: var(--theme-bg-main);
-  --color-slate-800: var(--theme-bg-secondary);
-  --color-white: var(--theme-white);
-  --color-slate-400: var(--theme-slate-400);
-  --color-slate-300: var(--theme-slate-300);
-}
-
-@layer base {
-  :root {
-    /* Light Mode (default) */
-    --theme-bg-main: #f8fafc; /* slate-50 */
-    --theme-bg-secondary: #f1f5f9; /* slate-100 */
-    --theme-white: #0f172a; /* slate-900 (acts as text/border color) */
-    --theme-slate-400: #64748b; /* slate-500 */
-    --theme-slate-300: #475569; /* slate-600 */
-  }
-
-  .dark {
-    /* Dark Mode */
-    --theme-bg-main: #0f172a; /* slate-900 */
-    --theme-bg-secondary: #1e293b; /* slate-800 */
-    --theme-white: #ffffff;
-    --theme-slate-400: #94a3b8; /* slate-400 */
-    --theme-slate-300: #cbd5e1; /* slate-300 */
-  }
-}
+@custom-variant dark (&:where(.dark, .dark *));

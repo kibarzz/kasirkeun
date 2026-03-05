@@ -440,7 +440,7 @@ export default function Inventory() {
                   placeholder={t.searchIngredients} 
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="bg-black/10 dark:bg-white/10 border border-black/20 dark:border-white/20 text-slate-900 dark:text-white placeholder-white/40 rounded-xl pl-10 pr-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 w-full md:w-64 transition-all"
+                  className="bg-slate-100 dark:bg-slate-800 border-0 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 rounded-xl pl-10 pr-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 w-full md:w-64 transition-all"
                 />
               </div>
               
@@ -532,15 +532,15 @@ export default function Inventory() {
                           value={item.priority || 'Medium'}
                           onChange={(e) => handlePriorityChange(item.id, e.target.value)}
                           className={clsx(
-                            "bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-colors cursor-pointer",
+                            "bg-slate-100 dark:bg-slate-800 border-0 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-colors cursor-pointer",
                             (item.priority || 'Medium') === 'High' ? 'text-rose-400' : 
                             (item.priority || 'Medium') === 'Medium' ? 'text-amber-400' : 
                             'text-emerald-400'
                           )}
                         >
-                          <option value="Low" className="bg-[#1a1a1a] text-slate-900 dark:text-white">{t.low}</option>
-                          <option value="Medium" className="bg-[#1a1a1a] text-slate-900 dark:text-white">{t.medium}</option>
-                          <option value="High" className="bg-[#1a1a1a] text-slate-900 dark:text-white">{t.high}</option>
+                          <option value="Low" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">{t.low}</option>
+                          <option value="Medium" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">{t.medium}</option>
+                          <option value="High" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">{t.high}</option>
                         </select>
                       </td>
                       <td className="py-4 text-right pr-4">
@@ -617,7 +617,7 @@ export default function Inventory() {
                             value={data?.actual ?? ''}
                             onChange={(e) => handleOpnameChange(item.id, e.target.value, item.stock)}
                             placeholder="0"
-                            className="w-24 bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-lg px-3 py-1.5 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50 font-mono"
+                            className="w-24 bg-slate-100 dark:bg-slate-800 border-0 rounded-lg px-3 py-1.5 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50 font-mono"
                           />
                           <span className="text-slate-400 dark:text-white/40 text-sm">{item.unit}</span>
                         </div>
@@ -674,11 +674,11 @@ export default function Inventory() {
                   <select 
                     value={wasteForm.ingredient_id}
                     onChange={e => setWasteForm({...wasteForm, ingredient_id: e.target.value})}
-                    className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-rose-500/50"
+                    className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-rose-500/50"
                   >
-                    <option value="" className="bg-[#1a1a1a] text-slate-500 dark:text-white/50">{t.selectIngredient}</option>
+                    <option value="" className="bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400">{t.selectIngredient}</option>
                     {ingredients.map(ing => (
-                      <option key={ing.id} value={ing.id} className="bg-[#1a1a1a] text-slate-900 dark:text-white">
+                      <option key={ing.id} value={ing.id} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
                         {ing.name} ({t.stock}: {ing.stock} {ing.unit})
                       </option>
                     ))}
@@ -693,7 +693,7 @@ export default function Inventory() {
                       step="any"
                       value={wasteForm.qty}
                       onChange={e => setWasteForm({...wasteForm, qty: e.target.value})}
-                      className="flex-1 bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-rose-500/50 font-mono"
+                      className="flex-1 bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-rose-500/50 font-mono"
                       placeholder="0"
                     />
                     <span className="text-slate-400 dark:text-white/40 w-12">
@@ -715,21 +715,21 @@ export default function Inventory() {
                           setWasteForm({...wasteForm, reason: ''});
                         }
                       }}
-                      className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-rose-500/50"
+                      className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-rose-500/50"
                     >
-                      <option value="" className="bg-[#1a1a1a] text-slate-500 dark:text-white/50">{t.selectReason}</option>
-                      <option value="Spilled" className="bg-[#1a1a1a] text-slate-900 dark:text-white">{t.spilled}</option>
-                      <option value="Expired" className="bg-[#1a1a1a] text-slate-900 dark:text-white">{t.expired}</option>
-                      <option value="Burnt" className="bg-[#1a1a1a] text-slate-900 dark:text-white">{t.burnt}</option>
-                      <option value="Quality Issue" className="bg-[#1a1a1a] text-slate-900 dark:text-white">{t.qualityIssue}</option>
-                      <option value="Other" className="bg-[#1a1a1a] text-slate-900 dark:text-white">{t.other}</option>
+                      <option value="" className="bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400">{t.selectReason}</option>
+                      <option value="Spilled" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">{t.spilled}</option>
+                      <option value="Expired" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">{t.expired}</option>
+                      <option value="Burnt" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">{t.burnt}</option>
+                      <option value="Quality Issue" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">{t.qualityIssue}</option>
+                      <option value="Other" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">{t.other}</option>
                     </select>
                     {wasteReasonType === 'Other' && (
                       <input 
                         type="text" 
                         value={wasteForm.reason}
                         onChange={e => setWasteForm({...wasteForm, reason: e.target.value})}
-                        className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-rose-500/50"
+                        className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-rose-500/50"
                         placeholder={t.pleaseSpecify}
                       />
                     )}
@@ -756,7 +756,7 @@ export default function Inventory() {
           <motion.div 
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-[#1a1a1a] border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+            className="bg-white dark:bg-slate-900 border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
           >
             <div className="flex justify-between items-center p-6 border-b border-black/10 dark:border-white/10">
               <h2 className="text-xl font-semibold text-slate-900 dark:text-white">{t.addNewIngredient}</h2>
@@ -781,7 +781,7 @@ export default function Inventory() {
                   type="text" 
                   value={newIngredient.name}
                   onChange={e => setNewIngredient({...newIngredient, name: e.target.value})}
-                  className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                  className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
                   placeholder="e.g. Espresso Beans"
                 />
               </div>
@@ -792,7 +792,7 @@ export default function Inventory() {
                   type="text" 
                   value={newIngredient.unit}
                   onChange={e => setNewIngredient({...newIngredient, unit: e.target.value})}
-                  className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                  className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
                   placeholder="e.g. kg, liters, pcs"
                 />
               </div>
@@ -805,7 +805,7 @@ export default function Inventory() {
                     step="any"
                     value={newIngredient.stock}
                     onChange={e => setNewIngredient({...newIngredient, stock: e.target.value})}
-                    className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                    className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
                     placeholder="0"
                   />
                 </div>
@@ -816,7 +816,7 @@ export default function Inventory() {
                     step="any"
                     value={newIngredient.min_stock}
                     onChange={e => setNewIngredient({...newIngredient, min_stock: e.target.value})}
-                    className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                    className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
                     placeholder="0"
                   />
                 </div>
@@ -829,7 +829,7 @@ export default function Inventory() {
                   step="any"
                   value={newIngredient.unit_cost}
                   onChange={e => setNewIngredient({...newIngredient, unit_cost: e.target.value})}
-                  className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                  className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
                   placeholder="0"
                 />
               </div>
@@ -839,11 +839,11 @@ export default function Inventory() {
                 <select 
                   value={newIngredient.priority}
                   onChange={e => setNewIngredient({...newIngredient, priority: e.target.value})}
-                  className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                  className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
                 >
-                  <option value="Low" className="bg-[#1a1a1a] text-slate-900 dark:text-white">{t.low}</option>
-                  <option value="Medium" className="bg-[#1a1a1a] text-slate-900 dark:text-white">{t.medium}</option>
-                  <option value="High" className="bg-[#1a1a1a] text-slate-900 dark:text-white">{t.high}</option>
+                  <option value="Low" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">{t.low}</option>
+                  <option value="Medium" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">{t.medium}</option>
+                  <option value="High" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">{t.high}</option>
                 </select>
               </div>
               
@@ -871,7 +871,7 @@ export default function Inventory() {
           <motion.div 
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-[#1a1a1a] border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+            className="bg-white dark:bg-slate-900 border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
           >
             <div className="flex justify-between items-center p-6 border-b border-black/10 dark:border-white/10">
               <h2 className="text-xl font-semibold text-slate-900 dark:text-white">{t.editIngredient}</h2>
@@ -896,7 +896,7 @@ export default function Inventory() {
                   type="text" 
                   value={editIngredient.name}
                   onChange={e => setEditIngredient({...editIngredient, name: e.target.value})}
-                  className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                  className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
                   placeholder="e.g. Espresso Beans"
                 />
               </div>
@@ -907,7 +907,7 @@ export default function Inventory() {
                   type="text" 
                   value={editIngredient.unit}
                   onChange={e => setEditIngredient({...editIngredient, unit: e.target.value})}
-                  className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                  className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
                   placeholder="e.g. kg, liters, pcs"
                 />
               </div>
@@ -920,7 +920,7 @@ export default function Inventory() {
                     step="any"
                     value={editIngredient.stock}
                     onChange={e => setEditIngredient({...editIngredient, stock: e.target.value})}
-                    className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                    className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
                     placeholder="0"
                   />
                 </div>
@@ -931,7 +931,7 @@ export default function Inventory() {
                     step="any"
                     value={editIngredient.min_stock}
                     onChange={e => setEditIngredient({...editIngredient, min_stock: e.target.value})}
-                    className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                    className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
                     placeholder="0"
                   />
                 </div>
@@ -944,7 +944,7 @@ export default function Inventory() {
                   step="any"
                   value={editIngredient.unit_cost}
                   onChange={e => setEditIngredient({...editIngredient, unit_cost: e.target.value})}
-                  className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                  className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
                   placeholder="0"
                 />
               </div>
@@ -954,11 +954,11 @@ export default function Inventory() {
                 <select 
                   value={editIngredient.priority}
                   onChange={e => setEditIngredient({...editIngredient, priority: e.target.value})}
-                  className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                  className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
                 >
-                  <option value="Low" className="bg-[#1a1a1a] text-slate-900 dark:text-white">{t.low}</option>
-                  <option value="Medium" className="bg-[#1a1a1a] text-slate-900 dark:text-white">{t.medium}</option>
-                  <option value="High" className="bg-[#1a1a1a] text-slate-900 dark:text-white">{t.high}</option>
+                  <option value="Low" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">{t.low}</option>
+                  <option value="Medium" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">{t.medium}</option>
+                  <option value="High" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">{t.high}</option>
                 </select>
               </div>
               
@@ -986,7 +986,7 @@ export default function Inventory() {
           <motion.div 
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-[#1a1a1a] border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+            className="bg-white dark:bg-slate-900 border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
           >
             <div className="flex justify-between items-center p-6 border-b border-black/10 dark:border-white/10">
               <h2 className="text-xl font-semibold text-slate-900 dark:text-white">{t.adjustStockTitle}: {selectedIngredient.name}</h2>
@@ -1048,7 +1048,7 @@ export default function Inventory() {
                     step="any"
                     value={adjustForm.qty}
                     onChange={e => setAdjustForm({...adjustForm, qty: e.target.value})}
-                    className="flex-1 bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50 font-mono"
+                    className="flex-1 bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50 font-mono"
                     placeholder="0"
                   />
                   <span className="text-slate-400 dark:text-white/40 w-12">{selectedIngredient.unit}</span>
@@ -1063,7 +1063,7 @@ export default function Inventory() {
                     step="any"
                     value={adjustForm.unit_cost}
                     onChange={e => setAdjustForm({...adjustForm, unit_cost: e.target.value})}
-                    className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50 font-mono"
+                    className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50 font-mono"
                     placeholder={selectedIngredient.unit_cost.toString()}
                   />
                   <p className="text-xs text-slate-500 dark:text-white/40 mt-1">
@@ -1078,7 +1078,7 @@ export default function Inventory() {
                   type="text" 
                   value={adjustForm.reason}
                   onChange={e => setAdjustForm({...adjustForm, reason: e.target.value})}
-                  className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                  className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
                   placeholder="e.g. Received new shipment, Found extra stock"
                 />
               </div>

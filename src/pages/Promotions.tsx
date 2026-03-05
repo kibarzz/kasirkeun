@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Tag, Plus, Trash2, Edit2, Clock, Package } from 'lucide-react';
+import { Tag, Plus, Trash2, Edit2, Clock, Package, X } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useLanguage } from '../i18n';
 
@@ -11,6 +11,7 @@ export default function Promotions() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingPromo, setEditingPromo] = useState<any>(null);
   const [currentStep, setCurrentStep] = useState(1);
+  const [filterType, setFilterType] = useState('all');
 
   const [formData, setFormData] = useState({
     name: '',
@@ -222,8 +223,49 @@ export default function Promotions() {
         </button>
       </div>
 
+      <div className="flex gap-2 pb-4 overflow-x-auto">
+        <button
+          onClick={() => setFilterType('all')}
+          className={clsx(
+            "px-4 py-2 rounded-xl text-sm font-medium transition-colors whitespace-nowrap",
+            filterType === 'all' 
+              ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/25" 
+              : "bg-white dark:bg-white/5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10"
+          )}
+        >
+          {t.all}
+        </button>
+        <button
+          onClick={() => setFilterType('bundle')}
+          className={clsx(
+            "px-4 py-2 rounded-xl text-sm font-medium transition-colors whitespace-nowrap",
+            filterType === 'bundle' 
+              ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/25" 
+              : "bg-white dark:bg-white/5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10"
+          )}
+        >
+          {t.bundleMultiBuy}
+        </button>
+        <button
+          onClick={() => setFilterType('discount')}
+          className={clsx(
+            "px-4 py-2 rounded-xl text-sm font-medium transition-colors whitespace-nowrap",
+            filterType === 'discount' 
+              ? "bg-amber-500 text-white shadow-lg shadow-amber-500/25" 
+              : "bg-white dark:bg-white/5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10"
+          )}
+        >
+          {t.discount}
+        </button>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {promotions.map((promo) => (
+        {promotions.filter(p => {
+          if (filterType === 'all') return true;
+          if (filterType === 'bundle') return ['buy_x_get_y', 'fixed_price', 'bogo', 'bundle'].includes(p.type);
+          if (filterType === 'discount') return ['percentage', 'time_based'].includes(p.type);
+          return true;
+        }).map((promo) => (
           <div key={promo.id} className="bg-black/5 dark:bg-white/5 backdrop-blur-xl border border-black/10 dark:border-white/10 rounded-3xl p-6 shadow-2xl relative overflow-hidden group">
             <div className="flex justify-between items-start mb-4">
               <div className="flex items-center gap-3">
@@ -306,9 +348,9 @@ export default function Promotions() {
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]"
+            className="bg-white dark:bg-slate-900 border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]"
           >
-            <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
+            <div className="p-6 border-b border-black/10 dark:border-white/10 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
               <div>
                 <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
                   {editingPromo ? t.editPromotion : t.createPromotion}
@@ -336,8 +378,11 @@ export default function Promotions() {
                   ))}
                 </div>
               </div>
-              <button onClick={() => setShowAddModal(false)} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">
-                <Trash2 className="w-5 h-5" />
+              <button 
+                onClick={() => setShowAddModal(false)} 
+                className="text-slate-400 dark:text-white/40 hover:text-slate-900 dark:text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
               </button>
             </div>
 
@@ -353,7 +398,7 @@ export default function Promotions() {
                           required
                           value={formData.name}
                           onChange={e => setFormData({ ...formData, name: e.target.value })}
-                          className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-3 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                          className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-3 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
                           placeholder="e.g., Weekend Special"
                         />
                       </div>
@@ -363,7 +408,7 @@ export default function Promotions() {
                         <textarea
                           value={formData.description}
                           onChange={e => setFormData({ ...formData, description: e.target.value })}
-                          className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-3 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                          className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-3 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
                           rows={2}
                         />
                       </div>
@@ -373,7 +418,7 @@ export default function Promotions() {
                         <select
                           value={formData.type}
                           onChange={e => setFormData({ ...formData, type: e.target.value })}
-                          className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-3 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                          className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-3 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
                         >
                           <optgroup label={t.bundleMultiBuy}>
                             <option value="buy_x_get_y">{t.buyXGetY}</option>
@@ -412,7 +457,7 @@ export default function Promotions() {
                             type="number"
                             value={formData.type === 'bogo' && !formData.buy_qty ? '1' : formData.buy_qty}
                             onChange={e => setFormData({ ...formData, buy_qty: e.target.value })}
-                            className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-slate-900 dark:text-white"
+                            className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-3 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
                             placeholder="e.g., 3"
                           />
                         </div>
@@ -423,7 +468,7 @@ export default function Promotions() {
                               type="number"
                               value={formData.get_qty}
                               onChange={e => setFormData({ ...formData, get_qty: e.target.value })}
-                              className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-slate-900 dark:text-white"
+                              className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-3 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
                               placeholder="e.g., 1"
                             />
                           </div>
@@ -435,7 +480,7 @@ export default function Promotions() {
                               type="number"
                               disabled
                               value="1"
-                              className="w-full bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-slate-400 dark:text-slate-500"
+                              className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-3 text-slate-400 dark:text-slate-500 opacity-50 cursor-not-allowed"
                             />
                           </div>
                         )}
@@ -446,7 +491,7 @@ export default function Promotions() {
                               type="number"
                               value={formData.fixed_price}
                               onChange={e => setFormData({ ...formData, fixed_price: e.target.value })}
-                              className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-slate-900 dark:text-white"
+                              className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-3 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
                               placeholder="e.g., 35000"
                             />
                           </div>
@@ -463,7 +508,7 @@ export default function Promotions() {
                               type="number"
                               value={formData.discount_percent}
                               onChange={e => setFormData({ ...formData, discount_percent: e.target.value })}
-                              className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-slate-900 dark:text-white"
+                              className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-3 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
                               placeholder="e.g., 20"
                             />
                           </div>
@@ -474,7 +519,7 @@ export default function Promotions() {
                                 type="number"
                                 value={formData.discount_amount}
                                 onChange={e => setFormData({ ...formData, discount_amount: e.target.value })}
-                                className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-slate-900 dark:text-white"
+                                className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-3 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
                                 placeholder="e.g., 5000"
                               />
                             </div>
@@ -509,7 +554,7 @@ export default function Promotions() {
                               type="time"
                               value={formData.start_time}
                               onChange={e => setFormData({ ...formData, start_time: e.target.value })}
-                              className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-slate-900 dark:text-white"
+                              className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-3 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
                             />
                           </div>
                           <div>
@@ -518,7 +563,7 @@ export default function Promotions() {
                               type="time"
                               value={formData.end_time}
                               onChange={e => setFormData({ ...formData, end_time: e.target.value })}
-                              className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-slate-900 dark:text-white"
+                              className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-3 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
                             />
                           </div>
                         </div>
@@ -537,7 +582,7 @@ export default function Promotions() {
                             type="date"
                             value={formData.start_date}
                             onChange={e => setFormData({ ...formData, start_date: e.target.value })}
-                            className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-slate-900 dark:text-white"
+                            className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-3 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
                           />
                         </div>
                         <div>
@@ -546,7 +591,7 @@ export default function Promotions() {
                             type="date"
                             value={formData.end_date}
                             onChange={e => setFormData({ ...formData, end_date: e.target.value })}
-                            className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-slate-900 dark:text-white"
+                            className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-3 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
                           />
                         </div>
                       </div>

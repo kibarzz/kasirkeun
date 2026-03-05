@@ -36,6 +36,8 @@ db.exec(`
     price_modifier REAL DEFAULT 0,
     dine_in_price REAL DEFAULT 0,
     online_price REAL DEFAULT 0,
+    dine_in_discount REAL DEFAULT 0,
+    online_discount REAL DEFAULT 0,
     FOREIGN KEY(product_id) REFERENCES products(id)
   );
 
@@ -203,6 +205,12 @@ try {
 } catch (e) {}
 try {
   db.exec('ALTER TABLE product_variants ADD COLUMN online_price REAL DEFAULT 0');
+} catch (e) {}
+try {
+  db.exec('ALTER TABLE product_variants ADD COLUMN dine_in_discount REAL DEFAULT 0');
+} catch (e) {}
+try {
+  db.exec('ALTER TABLE product_variants ADD COLUMN online_discount REAL DEFAULT 0');
 } catch (e) {}
 
 // Insert default settings

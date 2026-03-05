@@ -134,15 +134,15 @@ export default function Customers() {
             placeholder={t.searchCustomers}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+            className="w-full pl-12 pr-4 py-3 bg-slate-100 dark:bg-slate-800 border-0 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-slate-900 dark:text-white"
           />
         </div>
-        <div className="flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-2">
+        <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 border-0 rounded-2xl px-4 py-2">
           <ArrowUpDown className="w-5 h-5 text-slate-400" />
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
-            className="bg-transparent border-none focus:ring-0 text-slate-700 dark:text-slate-200 text-sm w-full"
+            className="bg-transparent border-none focus:ring-0 text-slate-700 dark:text-slate-200 text-sm w-full outline-none"
           >
             <option value="name_asc">{t.nameAZ}</option>
             <option value="name_desc">{t.nameZA}</option>
@@ -151,12 +151,12 @@ export default function Customers() {
             <option value="badge_desc">{t.highestBadge}</option>
           </select>
         </div>
-        <div className="flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-2">
+        <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 border-0 rounded-2xl px-4 py-2">
           <Filter className="w-5 h-5 text-slate-400" />
           <select
             value={segmentFilter}
             onChange={(e) => setSegmentFilter(e.target.value)}
-            className="bg-transparent border-none focus:ring-0 text-slate-700 dark:text-slate-200 text-sm w-full"
+            className="bg-transparent border-none focus:ring-0 text-slate-700 dark:text-slate-200 text-sm w-full outline-none"
           >
             <option value="all">{t.all} {t.segments}</option>
             <option value="high_value">{t.highValue}</option>
@@ -166,11 +166,11 @@ export default function Customers() {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-sm border border-black/10 dark:border-white/10">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-slate-200 dark:border-slate-700">
+              <tr className="border-b border-black/10 dark:border-white/10">
                 <th className="py-4 px-4 text-sm font-semibold text-slate-600 dark:text-slate-300">{t.customer}</th>
                 <th className="py-4 px-4 text-sm font-semibold text-slate-600 dark:text-slate-300">{t.contact}</th>
                 <th className="py-4 px-4 text-sm font-semibold text-slate-600 dark:text-slate-300">{t.totalVisits}</th>
@@ -183,7 +183,7 @@ export default function Customers() {
               {filteredAndSortedCustomers.map(customer => {
                 const badge = getLoyaltyBadge(customer.loyalty_visits || 0);
                 return (
-                  <tr key={customer.id} className="border-b border-slate-100 dark:border-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
+                  <tr key={customer.id} className="border-b border-black/5 dark:border-white/5 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
                     <td className="py-4 px-4">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold">
@@ -245,9 +245,9 @@ export default function Customers() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]"
+              className="bg-white dark:bg-slate-900 border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]"
             >
-              <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex justify-between items-start bg-slate-50 dark:bg-slate-800/50">
+              <div className="p-6 border-b border-black/10 dark:border-white/10 flex justify-between items-start bg-slate-50 dark:bg-slate-800/50">
                 <div className="flex items-center gap-4">
                   <div className="w-16 h-16 rounded-2xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold text-2xl">
                     {selectedCustomer.name.charAt(0).toUpperCase()}
@@ -260,7 +260,10 @@ export default function Customers() {
                     </div>
                   </div>
                 </div>
-                <button onClick={() => setSelectedCustomer(null)} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">
+                <button 
+                  onClick={() => setSelectedCustomer(null)} 
+                  className="text-slate-400 dark:text-white/40 hover:text-slate-900 dark:text-white transition-colors"
+                >
                   <X className="w-5 h-5" />
                 </button>
               </div>
@@ -296,7 +299,7 @@ export default function Customers() {
                       value={prefValue}
                       onChange={(e) => setPrefValue(e.target.value)}
                       placeholder={t.preferencesPlaceholder}
-                      className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none h-24 resize-none"
+                      className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-3 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none h-24 resize-none"
                     />
                   ) : (
                     <p className="text-slate-600 dark:text-slate-300 italic">

@@ -82,7 +82,7 @@ export default function Login({ onLogin }: { onLogin: (user: any) => void }) {
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     placeholder={t.usernamePlaceholder}
-                    className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 text-slate-900 dark:text-white placeholder-white/30 rounded-xl pl-10 pr-4 py-3 focus:outline-none focus:border-amber-500/50 focus:bg-black/10 dark:bg-white/10 transition-all"
+                    className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-white/30 rounded-xl pl-10 pr-4 py-3 focus:outline-none focus:border-amber-500/50 focus:bg-black/10 dark:bg-white/10 transition-all"
                     required
                   />
                 </div>
@@ -97,7 +97,7 @@ export default function Login({ onLogin }: { onLogin: (user: any) => void }) {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder={t.passwordPlaceholder}
-                    className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 text-slate-900 dark:text-white placeholder-white/30 rounded-xl pl-10 pr-4 py-3 focus:outline-none focus:border-amber-500/50 focus:bg-black/10 dark:bg-white/10 transition-all"
+                    className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-white/30 rounded-xl pl-10 pr-4 py-3 focus:outline-none focus:border-amber-500/50 focus:bg-black/10 dark:bg-white/10 transition-all"
                     required
                   />
                 </div>

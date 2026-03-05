@@ -199,11 +199,11 @@ async function startServer() {
       const productId = info.lastInsertRowid;
       
       if (variants && variants.length > 0) {
-        const insertVariant = db.prepare('INSERT INTO product_variants (product_id, name, dine_in_price, online_price) VALUES (?, ?, ?, ?)');
+        const insertVariant = db.prepare('INSERT INTO product_variants (product_id, name, dine_in_price, online_price, dine_in_discount, online_discount) VALUES (?, ?, ?, ?, ?, ?)');
         const insertRecipe = db.prepare('INSERT INTO recipes (product_variant_id, ingredient_id, qty, adjustment_factor) VALUES (?, ?, ?, ?)');
         
         for (const variant of variants) {
-          const vInfo = insertVariant.run(productId, variant.name, variant.dine_in_price || 0, variant.online_price || 0);
+          const vInfo = insertVariant.run(productId, variant.name, variant.dine_in_price || 0, variant.online_price || 0, variant.dine_in_discount || 0, variant.online_discount || 0);
           const variantId = vInfo.lastInsertRowid;
           
           if (variant.recipe) {
@@ -249,9 +249,9 @@ async function startServer() {
 
   app.put('/api/variants/:id', (req, res) => {
     const { id } = req.params;
-    const { name, dine_in_price, online_price } = req.body;
+    const { name, dine_in_price, online_price, dine_in_discount, online_discount } = req.body;
     try {
-      db.prepare('UPDATE product_variants SET name = ?, dine_in_price = ?, online_price = ? WHERE id = ?').run(name, dine_in_price, online_price, id);
+      db.prepare('UPDATE product_variants SET name = ?, dine_in_price = ?, online_price = ?, dine_in_discount = ?, online_discount = ? WHERE id = ?').run(name, dine_in_price, online_price, dine_in_discount || 0, online_discount || 0, id);
       res.json({ success: true });
     } catch (error) {
       console.error('Error updating variant:', error);

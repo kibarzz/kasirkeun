@@ -81,7 +81,7 @@ export default function Settings() {
 
       <div className="space-y-6">
         {/* Language Settings */}
-        <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
+        <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-sm border border-black/10 dark:border-white/10">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-3 bg-indigo-500/10 text-indigo-500 rounded-2xl">
               <Globe className="w-6 h-6" />
@@ -119,7 +119,7 @@ export default function Settings() {
         </div>
 
         {/* RBAC Settings */}
-        <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
+        <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-sm border border-black/10 dark:border-white/10">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <div className="p-3 bg-amber-500/10 text-amber-500 rounded-2xl">
@@ -146,7 +146,7 @@ export default function Settings() {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-slate-200 dark:border-slate-700">
+                <tr className="border-b border-black/10 dark:border-white/10">
                   <th className="py-3 px-4 text-sm font-semibold text-slate-600 dark:text-slate-300">{t.username}</th>
                   <th className="py-3 px-4 text-sm font-semibold text-slate-600 dark:text-slate-300">{t.role}</th>
                   <th className="py-3 px-4 text-sm font-semibold text-slate-600 dark:text-slate-300 text-right">{t.actions}</th>
@@ -154,7 +154,7 @@ export default function Settings() {
               </thead>
               <tbody>
                 {users.map(u => (
-                  <tr key={u.id} className="border-b border-slate-100 dark:border-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                  <tr key={u.id} className="border-b border-black/5 dark:border-white/5 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                     <td className="py-3 px-4 text-slate-900 dark:text-white font-medium">{u.username}</td>
                     <td className="py-3 px-4">
                       <span className={clsx(
@@ -186,9 +186,9 @@ export default function Settings() {
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden"
+            className="bg-white dark:bg-slate-900 border border-black/10 dark:border-white/10 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden"
           >
-            <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
+            <div className="p-6 border-b border-black/10 dark:border-white/10 flex justify-between items-center">
               <h2 className="text-xl font-bold text-slate-900 dark:text-white">
                 {editingUser ? t.editUser : t.addUser}
               </h2>

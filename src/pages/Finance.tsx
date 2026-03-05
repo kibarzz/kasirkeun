@@ -360,11 +360,11 @@ export default function Finance() {
       )}
 
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-50 dark:bg-slate-900/80 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
           <motion.div
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="bg-white dark:bg-slate-800 border border-black/10 dark:border-white/10 rounded-3xl p-6 w-full max-w-md shadow-2xl"
+            className="bg-white dark:bg-slate-900 border border-black/10 dark:border-white/10 rounded-3xl p-6 w-full max-w-md shadow-2xl"
           >
             <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-6">{t.addExpense}</h2>
             <form onSubmit={handleAddCost} className="space-y-4">
@@ -375,7 +375,7 @@ export default function Finance() {
                   required
                   value={newCost.name}
                   onChange={e => setNewCost({...newCost, name: e.target.value})}
-                  className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 text-slate-900 dark:text-white rounded-xl px-4 py-2 focus:outline-none focus:border-amber-500/50"
+                  className="w-full bg-slate-100 dark:bg-slate-800 border-0 text-slate-900 dark:text-white rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-500/50"
                   placeholder="e.g. Electricity, Rent"
                 />
               </div>
@@ -385,7 +385,7 @@ export default function Finance() {
                   <select
                     value={newCost.type}
                     onChange={e => setNewCost({...newCost, type: e.target.value})}
-                    className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 text-slate-900 dark:text-white rounded-xl px-4 py-2 focus:outline-none focus:border-amber-500/50 [&>option]:bg-white dark:bg-slate-800"
+                    className="w-full bg-slate-100 dark:bg-slate-800 border-0 text-slate-900 dark:text-white rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-500/50 [&>option]:bg-white dark:bg-slate-800"
                   >
                     <option value="Fixed">{t.fixed}</option>
                     <option value="Variable">{t.variable}</option>
@@ -396,7 +396,7 @@ export default function Finance() {
                   <select
                     value={newCost.period}
                     onChange={e => setNewCost({...newCost, period: e.target.value})}
-                    className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 text-slate-900 dark:text-white rounded-xl px-4 py-2 focus:outline-none focus:border-amber-500/50 [&>option]:bg-white dark:bg-slate-800"
+                    className="w-full bg-slate-100 dark:bg-slate-800 border-0 text-slate-900 dark:text-white rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-500/50 [&>option]:bg-white dark:bg-slate-800"
                   >
                     <option value="Monthly">{t.monthly}</option>
                     <option value="Weekly">{t.weekly}</option>
@@ -413,7 +413,7 @@ export default function Finance() {
                   min="0"
                   value={newCost.amount}
                   onChange={e => setNewCost({...newCost, amount: e.target.value})}
-                  className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 text-slate-900 dark:text-white rounded-xl px-4 py-2 focus:outline-none focus:border-amber-500/50"
+                  className="w-full bg-slate-100 dark:bg-slate-800 border-0 text-slate-900 dark:text-white rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-500/50"
                 />
               </div>
               <div className="flex gap-3 mt-6">

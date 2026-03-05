@@ -28,7 +28,7 @@ export default function Menu() {
     category: '',
     image_url: '',
   });
-  const [newVariants, setNewVariants] = useState([{ name: 'Regular', dine_in_price: '', online_price: '' }]);
+  const [newVariants, setNewVariants] = useState([{ name: 'Regular', dine_in_price: '', online_price: '', dine_in_discount: '', online_discount: '' }]);
 
   // Edit Product Form State
   const [editProductForm, setEditProductForm] = useState({
@@ -42,6 +42,8 @@ export default function Menu() {
     name: '',
     dine_in_price: '',
     online_price: '',
+    dine_in_discount: '',
+    online_discount: '',
   });
 
   // Add Recipe Form State
@@ -88,7 +90,9 @@ export default function Menu() {
     const formattedVariants = newVariants.map(v => ({
       name: v.name,
       dine_in_price: parseFloat(v.dine_in_price) || 0,
-      online_price: parseFloat(v.online_price) || 0
+      online_price: parseFloat(v.online_price) || 0,
+      dine_in_discount: parseFloat(v.dine_in_discount) || 0,
+      online_discount: parseFloat(v.online_discount) || 0
     }));
 
     try {
@@ -177,7 +181,9 @@ export default function Menu() {
         body: JSON.stringify({
           ...editVariantForm,
           dine_in_price: parseFloat(editVariantForm.dine_in_price),
-          online_price: parseFloat(editVariantForm.online_price)
+          online_price: parseFloat(editVariantForm.online_price),
+          dine_in_discount: parseFloat(editVariantForm.dine_in_discount) || 0,
+          online_discount: parseFloat(editVariantForm.online_discount) || 0
         })
       });
 
@@ -234,7 +240,7 @@ export default function Menu() {
   };
 
   const addVariantField = () => {
-    setNewVariants([...newVariants, { name: '', dine_in_price: '', online_price: '' }]);
+    setNewVariants([...newVariants, { name: '', dine_in_price: '', online_price: '', dine_in_discount: '', online_discount: '' }]);
   };
 
   const removeVariantField = (index: number) => {
@@ -335,7 +341,7 @@ export default function Menu() {
               placeholder={t.searchMenu} 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-black/10 dark:bg-white/10 border border-black/20 dark:border-white/20 text-slate-900 dark:text-white placeholder-white/40 rounded-xl pl-10 pr-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
+              className="w-full bg-slate-100 dark:bg-slate-800 border-0 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 rounded-xl pl-10 pr-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
             />
           </div>
 
@@ -467,7 +473,9 @@ export default function Menu() {
                                   setEditVariantForm({
                                     name: variant.name,
                                     dine_in_price: variant.dine_in_price.toString(),
-                                    online_price: variant.online_price.toString()
+                                    online_price: variant.online_price.toString(),
+                                    dine_in_discount: (variant.dine_in_discount || 0).toString(),
+                                    online_discount: (variant.online_discount || 0).toString()
                                   });
                                   setIsEditVariantModalOpen(true);
                                 }}
@@ -550,7 +558,7 @@ export default function Menu() {
           <motion.div 
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-[#1a1a1a] border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden max-h-[90vh] flex flex-col"
+            className="bg-white dark:bg-slate-900 border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden max-h-[90vh] flex flex-col"
           >
             <div className="flex justify-between items-center p-6 border-b border-black/10 dark:border-white/10 shrink-0">
               <h2 className="text-xl font-semibold text-slate-900 dark:text-white">{t.addNewProduct}</h2>
@@ -581,7 +589,7 @@ export default function Menu() {
                         type="file" 
                         accept="image/*"
                         onChange={e => handleImageUpload(e, false)}
-                        className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-500/20 file:text-indigo-400 hover:file:bg-indigo-500/30"
+                        className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-500/20 file:text-indigo-400 hover:file:bg-indigo-500/30"
                       />
                     </div>
                   </div>
@@ -591,7 +599,7 @@ export default function Menu() {
                       type="text" 
                       value={newProduct.name}
                       onChange={e => setNewProduct({...newProduct, name: e.target.value})}
-                      className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                      className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
                       placeholder="e.g. Caramel Macchiato"
                     />
                   </div>
@@ -602,7 +610,7 @@ export default function Menu() {
                       type="text" 
                       value={newProduct.category}
                       onChange={e => setNewProduct({...newProduct, category: e.target.value})}
-                      className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                      className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
                       placeholder="e.g. Coffee"
                     />
                   </div>
@@ -614,7 +622,7 @@ export default function Menu() {
                     <button 
                       type="button"
                       onClick={addVariantField}
-                      className="text-xs bg-black/10 dark:bg-white/10 hover:bg-black/20 dark:bg-white/20 text-slate-900 dark:text-white px-2 py-1 rounded-lg transition-colors flex items-center gap-1"
+                      className="text-xs bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-900 dark:text-white px-2 py-1 rounded-lg transition-colors flex items-center gap-1"
                     >
                       <Plus className="w-3 h-3" /> {t.addVariant}
                     </button>
@@ -622,14 +630,14 @@ export default function Menu() {
                   
                   <div className="space-y-3">
                     {newVariants.map((variant, index) => (
-                      <div key={index} className="bg-black/5 dark:bg-white/5 p-4 rounded-xl border border-black/10 dark:border-white/10 space-y-3">
+                      <div key={index} className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700 space-y-3">
                         <div className="flex items-center gap-3">
                           <div className="flex-1">
                             <input 
                               type="text" 
                               value={variant.name}
                               onChange={e => updateVariantField(index, 'name', e.target.value)}
-                              className="w-full bg-transparent border-b border-black/20 dark:border-white/20 px-2 py-1 text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 text-sm font-medium"
+                              className="w-full bg-transparent border-b border-slate-300 dark:border-slate-600 px-2 py-1 text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 text-sm font-medium"
                               placeholder={`${t.variantName} (e.g. Regular)`}
                             />
                           </div>
@@ -650,7 +658,7 @@ export default function Menu() {
                               type="number" 
                               value={variant.dine_in_price}
                               onChange={e => updateVariantField(index, 'dine_in_price', e.target.value)}
-                              className="w-full bg-black/10 dark:bg-white/10 border border-black/10 dark:border-white/10 rounded-lg px-3 py-1.5 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500/50 text-sm font-mono"
+                              className="w-full bg-white dark:bg-slate-900 border-0 rounded-lg px-3 py-1.5 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500/50 text-sm font-mono"
                               placeholder="0"
                             />
                           </div>
@@ -660,7 +668,27 @@ export default function Menu() {
                               type="number" 
                               value={variant.online_price}
                               onChange={e => updateVariantField(index, 'online_price', e.target.value)}
-                              className="w-full bg-black/10 dark:bg-white/10 border border-black/10 dark:border-white/10 rounded-lg px-3 py-1.5 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500/50 text-sm font-mono"
+                              className="w-full bg-white dark:bg-slate-900 border-0 rounded-lg px-3 py-1.5 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500/50 text-sm font-mono"
+                              placeholder="0"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] uppercase tracking-wider text-slate-400 dark:text-white/40 mb-1">{t.discount} (Dine-in %)</label>
+                            <input 
+                              type="number" 
+                              value={variant.dine_in_discount}
+                              onChange={e => updateVariantField(index, 'dine_in_discount', e.target.value)}
+                              className="w-full bg-white dark:bg-slate-900 border-0 rounded-lg px-3 py-1.5 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500/50 text-sm font-mono"
+                              placeholder="0"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] uppercase tracking-wider text-slate-400 dark:text-white/40 mb-1">{t.discount} (Online %)</label>
+                            <input 
+                              type="number" 
+                              value={variant.online_discount}
+                              onChange={e => updateVariantField(index, 'online_discount', e.target.value)}
+                              className="w-full bg-white dark:bg-slate-900 border-0 rounded-lg px-3 py-1.5 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500/50 text-sm font-mono"
                               placeholder="0"
                             />
                           </div>
@@ -698,7 +726,7 @@ export default function Menu() {
           <motion.div 
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-[#1a1a1a] border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]"
+            className="bg-white dark:bg-slate-900 border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]"
           >
             <div className="flex justify-between items-center p-6 border-b border-black/10 dark:border-white/10 shrink-0">
               <h2 className="text-xl font-semibold text-slate-900 dark:text-white">{t.editProductDetails}</h2>
@@ -729,7 +757,7 @@ export default function Menu() {
                         type="file" 
                         accept="image/*"
                         onChange={e => handleImageUpload(e, true)}
-                        className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-500/20 file:text-indigo-400 hover:file:bg-indigo-500/30"
+                        className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-500/20 file:text-indigo-400 hover:file:bg-indigo-500/30"
                       />
                     </div>
                   </div>
@@ -739,7 +767,7 @@ export default function Menu() {
                       type="text" 
                       value={editProductForm.name}
                       onChange={e => setEditProductForm({...editProductForm, name: e.target.value})}
-                      className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                      className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
                       placeholder="e.g. Iced Latte"
                     />
                   </div>
@@ -750,7 +778,7 @@ export default function Menu() {
                       type="text" 
                       value={editProductForm.category}
                       onChange={e => setEditProductForm({...editProductForm, category: e.target.value})}
-                      className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                      className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
                       placeholder="e.g. Coffee"
                     />
                   </div>
@@ -784,7 +812,7 @@ export default function Menu() {
           <motion.div 
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-[#1a1a1a] border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+            className="bg-white dark:bg-slate-900 border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
           >
             <div className="flex justify-between items-center p-6 border-b border-black/10 dark:border-white/10">
               <h2 className="text-xl font-semibold text-slate-900 dark:text-white">{t.editVariantPrice}</h2>
@@ -809,7 +837,7 @@ export default function Menu() {
                   type="text" 
                   value={editVariantForm.name}
                   onChange={e => setEditVariantForm({...editVariantForm, name: e.target.value})}
-                  className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                  className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
                 />
               </div>
               
@@ -820,7 +848,7 @@ export default function Menu() {
                     type="number" 
                     value={editVariantForm.dine_in_price}
                     onChange={e => setEditVariantForm({...editVariantForm, dine_in_price: e.target.value})}
-                    className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 font-mono"
+                    className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 font-mono"
                   />
                 </div>
                 <div>
@@ -829,7 +857,25 @@ export default function Menu() {
                     type="number" 
                     value={editVariantForm.online_price}
                     onChange={e => setEditVariantForm({...editVariantForm, online_price: e.target.value})}
-                    className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 font-mono"
+                    className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-500 dark:text-white/60 mb-1">{t.discount} (Dine-in %)</label>
+                  <input 
+                    type="number" 
+                    value={editVariantForm.dine_in_discount}
+                    onChange={e => setEditVariantForm({...editVariantForm, dine_in_discount: e.target.value})}
+                    className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-500 dark:text-white/60 mb-1">{t.discount} (Online %)</label>
+                  <input 
+                    type="number" 
+                    value={editVariantForm.online_discount}
+                    onChange={e => setEditVariantForm({...editVariantForm, online_discount: e.target.value})}
+                    className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 font-mono"
                   />
                 </div>
               </div>
@@ -860,7 +906,7 @@ export default function Menu() {
           <motion.div 
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-[#1a1a1a] border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+            className="bg-white dark:bg-slate-900 border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
           >
             <div className="flex justify-between items-center p-6 border-b border-black/10 dark:border-white/10">
               <h2 className="text-xl font-semibold text-slate-900 dark:text-white">{t.addRecipeItem}</h2>
@@ -889,11 +935,11 @@ export default function Menu() {
                 <select 
                   value={newRecipe.ingredient_id}
                   onChange={e => setNewRecipe({...newRecipe, ingredient_id: e.target.value})}
-                  className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                  className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
                 >
-                  <option value="" className="bg-[#1a1a1a] text-slate-500 dark:text-white/50">{t.selectAnIngredient}</option>
+                  <option value="" className="bg-white dark:bg-slate-900 text-slate-500 dark:text-white/50">{t.selectAnIngredient}</option>
                   {ingredients.map(ing => (
-                    <option key={ing.id} value={ing.id} className="bg-[#1a1a1a] text-slate-900 dark:text-white">
+                    <option key={ing.id} value={ing.id} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
                       {ing.name} ({ing.unit})
                     </option>
                   ))}
@@ -908,7 +954,7 @@ export default function Menu() {
                     step="any"
                     value={newRecipe.qty}
                     onChange={e => setNewRecipe({...newRecipe, qty: e.target.value})}
-                    className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 font-mono"
+                    className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 font-mono"
                     placeholder="0"
                   />
                 </div>
@@ -919,7 +965,7 @@ export default function Menu() {
                     step="any"
                     value={newRecipe.adjustment_factor}
                     onChange={e => setNewRecipe({...newRecipe, adjustment_factor: e.target.value})}
-                    className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 font-mono"
+                    className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 font-mono"
                     placeholder="1.0"
                   />
                 </div>

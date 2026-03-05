@@ -355,7 +355,7 @@ export default function POS() {
                 placeholder={t.searchMenu} 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="bg-black/10 dark:bg-white/10 border border-black/20 dark:border-white/20 text-slate-900 dark:text-white placeholder-white/40 rounded-xl pl-10 pr-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500/50 w-full md:w-64 transition-all"
+                className="bg-black/10 dark:bg-white/10 border border-black/20 dark:border-white/20 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-white/40 rounded-xl pl-10 pr-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500/50 w-full md:w-64 transition-all"
               />
             </div>
             
@@ -475,7 +475,7 @@ export default function POS() {
                     placeholder={t.searchOrAddCustomer} 
                     value={customerSearch}
                     onChange={(e) => setCustomerSearch(e.target.value)}
-                    className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 text-slate-900 dark:text-white placeholder-white/40 rounded-xl pl-9 pr-4 py-2 text-sm focus:outline-none focus:border-amber-500/50 transition-colors"
+                    className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-white/40 rounded-xl pl-9 pr-4 py-2 text-sm focus:outline-none focus:border-amber-500/50 transition-colors"
                   />
                 </div>
                 <div className="relative">
@@ -485,7 +485,7 @@ export default function POS() {
                     placeholder="Phone Number" 
                     value={customerPhone}
                     onChange={(e) => setCustomerPhone(e.target.value)}
-                    className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 text-slate-900 dark:text-white placeholder-white/40 rounded-xl pl-9 pr-4 py-2 text-sm focus:outline-none focus:border-amber-500/50 transition-colors"
+                    className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-white/40 rounded-xl pl-9 pr-4 py-2 text-sm focus:outline-none focus:border-amber-500/50 transition-colors"
                   />
                 </div>
                 
@@ -677,13 +677,13 @@ export default function POS() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-50 dark:bg-slate-900/80 backdrop-blur-sm"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
           >
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white dark:bg-slate-800 border border-black/10 dark:border-white/10 rounded-3xl p-6 w-full max-w-md shadow-2xl"
+              className="bg-white dark:bg-slate-900 border border-black/10 dark:border-white/10 rounded-3xl p-6 w-full max-w-md shadow-2xl"
             >
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-bold text-slate-900 dark:text-white">{t.shiftSummary}</h2>
