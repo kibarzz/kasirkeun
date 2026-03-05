@@ -99,7 +99,7 @@ export default function Settings() {
                 "flex-1 py-3 px-4 rounded-xl font-medium transition-all border",
                 lang === 'en' 
                   ? "bg-indigo-500 text-white border-indigo-500 shadow-lg shadow-indigo-500/25" 
-                  : "bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-indigo-500"
+                  : "bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-white/70 border-slate-200 dark:border-slate-700 hover:border-indigo-500"
               )}
             >
               {t.english}
@@ -110,7 +110,7 @@ export default function Settings() {
                 "flex-1 py-3 px-4 rounded-xl font-medium transition-all border",
                 lang === 'id' 
                   ? "bg-indigo-500 text-white border-indigo-500 shadow-lg shadow-indigo-500/25" 
-                  : "bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-indigo-500"
+                  : "bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-white/70 border-slate-200 dark:border-slate-700 hover:border-indigo-500"
               )}
             >
               {t.indonesian}
@@ -147,9 +147,9 @@ export default function Settings() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-black/10 dark:border-white/10">
-                  <th className="py-3 px-4 text-sm font-semibold text-slate-600 dark:text-slate-300">{t.username}</th>
-                  <th className="py-3 px-4 text-sm font-semibold text-slate-600 dark:text-slate-300">{t.role}</th>
-                  <th className="py-3 px-4 text-sm font-semibold text-slate-600 dark:text-slate-300 text-right">{t.actions}</th>
+                  <th className="py-3 px-4 text-sm font-semibold text-slate-600 dark:text-white/70">{t.username}</th>
+                  <th className="py-3 px-4 text-sm font-semibold text-slate-600 dark:text-white/70">{t.role}</th>
+                  <th className="py-3 px-4 text-sm font-semibold text-slate-600 dark:text-white/70 text-right">{t.actions}</th>
                 </tr>
               </thead>
               <tbody>

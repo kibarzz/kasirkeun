@@ -231,21 +231,21 @@ export default function Finance() {
                   <td className="py-4">
                     <span className={clsx(
                       "px-2 py-1 rounded-lg text-xs font-medium",
-                      cost.type === 'Fixed' ? "bg-rose-500/20 text-rose-400" : "bg-orange-500/20 text-orange-400"
+                      cost.type === 'Fixed' ? "bg-rose-500/20 text-rose-500 dark:text-rose-400" : "bg-orange-500/20 text-orange-500 dark:text-orange-400"
                     )}>
                       {cost.type === 'Fixed' ? t.fixed : t.variable}
                     </span>
                   </td>
-                  <td className="py-4">
+                  <td className="py-4 text-slate-900 dark:text-white">
                     {cost.period === 'Monthly' ? t.monthly : 
                      cost.period === 'Weekly' ? t.weekly : 
                      cost.period === 'Daily' ? t.daily : t.yearly}
                   </td>
-                  <td className="py-4 text-right font-mono text-amber-400">{formatCurrency(cost.amount)}</td>
+                  <td className="py-4 text-right font-mono text-amber-500 dark:text-amber-400">{formatCurrency(cost.amount)}</td>
                   <td className="py-4 text-right">
                     <button 
                       onClick={() => handleDeleteCost(cost.id)}
-                      className="p-2 hover:bg-rose-500/20 text-rose-400 rounded-lg transition-colors"
+                      className="p-2 hover:bg-rose-500/20 text-rose-500 dark:text-rose-400 rounded-lg transition-colors"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -254,7 +254,7 @@ export default function Finance() {
               ))}
               {costs.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="py-8 text-center text-slate-400 dark:text-white/40">{t.noExpensesRecorded}</td>
+                  <td colSpan={5} className="py-8 text-center text-slate-500 dark:text-white/40">{t.noExpensesRecorded}</td>
                 </tr>
               )}
             </tbody>
@@ -337,19 +337,19 @@ export default function Finance() {
                     <th className="pb-3 font-medium text-right">{t.profit}</th>
                   </tr>
                 </thead>
-                <tbody className="text-slate-600 dark:text-white/80 text-sm">
+                <tbody className="text-slate-900 dark:text-white/80 text-sm">
                   {salesReport.map((report, idx) => (
                     <tr key={idx} className="border-b border-black/5 dark:border-white/5 hover:bg-black/5 dark:bg-white/5 transition-colors">
                       <td className="py-4 font-medium text-slate-900 dark:text-white">{report.date}</td>
-                      <td className="py-4 text-right font-mono">{report.transactions}</td>
-                      <td className="py-4 text-right font-mono text-amber-400">{formatCurrency(report.revenue)}</td>
-                      <td className="py-4 text-right font-mono text-rose-400">{formatCurrency(report.total_hpp)}</td>
-                      <td className="py-4 text-right font-mono text-emerald-400">{formatCurrency(report.profit)}</td>
+                      <td className="py-4 text-right font-mono text-slate-900 dark:text-white">{report.transactions}</td>
+                      <td className="py-4 text-right font-mono text-amber-500 dark:text-amber-400">{formatCurrency(report.revenue)}</td>
+                      <td className="py-4 text-right font-mono text-rose-500 dark:text-rose-400">{formatCurrency(report.total_hpp)}</td>
+                      <td className="py-4 text-right font-mono text-emerald-500 dark:text-emerald-400">{formatCurrency(report.profit)}</td>
                     </tr>
                   ))}
                   {salesReport.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="py-8 text-center text-slate-400 dark:text-white/40">{t.noSalesData}</td>
+                      <td colSpan={5} className="py-8 text-center text-slate-500 dark:text-white/40">{t.noSalesData}</td>
                     </tr>
                   )}
                 </tbody>

@@ -47,7 +47,7 @@ export default function Dashboard() {
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">{t.executiveDashboard}</h1>
           <p className="text-slate-500 dark:text-white/60 mt-1">{t.realTimePerformance}</p>
         </div>
-        <div className="bg-black/10 dark:bg-white/10 backdrop-blur-md border border-black/20 dark:border-white/20 rounded-xl px-4 py-2 text-white/90 text-sm font-medium w-full md:w-auto text-center">
+        <div className="bg-black/10 dark:bg-white/10 backdrop-blur-md border border-black/20 dark:border-white/20 rounded-xl px-4 py-2 text-slate-700 dark:text-white/90 text-sm font-medium w-full md:w-auto text-center">
           {new Date().toLocaleDateString(lang === 'id' ? 'id-ID' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
         </div>
       </header>
@@ -131,6 +131,7 @@ export default function Dashboard() {
                 <Tooltip 
                   contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', color: '#fff' }}
                   itemStyle={{ color: '#f59e0b' }}
+                  labelStyle={{ color: '#fff' }}
                 />
                 <Area type="monotone" dataKey="sales" stroke="#f59e0b" strokeWidth={3} fillOpacity={1} fill="url(#colorSales)" />
               </AreaChart>
@@ -184,15 +185,15 @@ export default function Dashboard() {
                 <th className="pb-3 font-medium text-right">{t.actions}</th>
               </tr>
             </thead>
-            <tbody className="text-slate-600 dark:text-white/80 text-sm">
+            <tbody className="text-slate-900 dark:text-white/80 text-sm">
               {stats?.recentTransactions?.map((tx: any) => (
                 <tr key={tx.id} className="border-b border-black/5 dark:border-white/5 hover:bg-black/5 dark:bg-white/5 transition-colors">
-                  <td className="py-4 font-mono text-amber-400">#{tx.id}</td>
-                  <td className="py-4">{new Date(tx.created_at).toLocaleTimeString()}</td>
-                  <td className="py-4 capitalize">
+                  <td className="py-4 font-mono text-amber-500 dark:text-amber-400">#{tx.id}</td>
+                  <td className="py-4 text-slate-900 dark:text-white">{new Date(tx.created_at).toLocaleTimeString()}</td>
+                  <td className="py-4 capitalize text-slate-900 dark:text-white">
                     {tx.type === 'paid' ? t.paid : tx.type === 'complementary' ? t.complementary : tx.type}
                   </td>
-                  <td className="py-4">
+                  <td className="py-4 text-slate-900 dark:text-white">
                     {tx.payment_method.split(', ').map((m: string) => {
                       if (m === 'Cash') return t.cash;
                       if (m === 'QRIS') return t.qris;
@@ -200,7 +201,7 @@ export default function Dashboard() {
                       return m;
                     }).join(', ')}
                   </td>
-                  <td className="py-4 text-right font-mono">{formatCurrency(tx.final_amount)}</td>
+                  <td className="py-4 text-right font-mono text-slate-900 dark:text-white">{formatCurrency(tx.final_amount)}</td>
                   <td className="py-4 text-center">
                     <span className={`px-2 py-1 rounded-lg text-xs font-medium ${tx.status === 'completed' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}`}>
                       {tx.status === 'completed' ? t.completed : tx.status === 'voided' ? t.voided : tx.status}

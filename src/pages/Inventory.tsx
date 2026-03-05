@@ -505,24 +505,24 @@ export default function Inventory() {
                     <th className="pb-3 font-medium text-right pr-4">{t.actions}</th>
                   </tr>
                 </thead>
-                <tbody className="text-white/90">
+                <tbody className="text-slate-900 dark:text-white/90">
                   {sortedIngredients.map(item => (
                     <tr key={item.id} className="border-b border-black/5 dark:border-white/5 hover:bg-black/5 dark:bg-white/5 transition-colors group">
-                      <td className="py-4 pl-4 font-medium">{item.name}</td>
-                      <td className="py-4 font-mono">
-                        <span className={item.stock <= item.min_stock ? 'text-rose-400 font-bold' : ''}>
+                      <td className="py-4 pl-4 font-medium text-slate-900 dark:text-white">{item.name}</td>
+                      <td className="py-4 font-mono text-slate-900 dark:text-white">
+                        <span className={item.stock <= item.min_stock ? 'text-rose-500 font-bold' : ''}>
                           {item.stock}
                         </span>
                       </td>
                       <td className="py-4 text-slate-500 dark:text-white/60">{item.unit}</td>
-                      <td className="py-4 font-mono text-emerald-400">{formatCurrency(item.unit_cost)}</td>
+                      <td className="py-4 font-mono text-emerald-500 dark:text-emerald-400">{formatCurrency(item.unit_cost)}</td>
                       <td className="py-4">
                         {item.stock <= item.min_stock ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-rose-500/20 text-rose-400 text-xs font-medium border border-rose-500/20">
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-rose-500/20 text-rose-500 dark:text-rose-400 text-xs font-medium border border-rose-500/20">
                             <AlertTriangle className="w-3 h-3" /> {t.lowStock}
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-emerald-500/20 text-emerald-400 text-xs font-medium border border-emerald-500/20">
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-emerald-500/20 text-emerald-500 dark:text-emerald-400 text-xs font-medium border border-emerald-500/20">
                             {t.good}
                           </span>
                         )}
@@ -598,14 +598,14 @@ export default function Inventory() {
                   <th className="pb-3 font-medium text-right pr-4">{t.action}</th>
                 </tr>
               </thead>
-              <tbody className="text-white/90">
+              <tbody className="text-slate-900 dark:text-white/90">
                 {filteredIngredients.map(item => {
                   const data = opnameData[item.id];
                   const hasInput = data && data.actual !== '';
                   
                   return (
                     <tr key={item.id} className="border-b border-black/5 dark:border-white/5 hover:bg-black/5 dark:bg-white/5 transition-colors group">
-                      <td className="py-4 pl-4 font-medium">{item.name}</td>
+                      <td className="py-4 pl-4 font-medium text-slate-900 dark:text-white">{item.name}</td>
                       <td className="py-4 font-mono text-slate-500 dark:text-white/60">
                         {item.stock} {item.unit}
                       </td>

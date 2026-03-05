@@ -423,7 +423,7 @@ export default function POS() {
                         <button
                           key={v.id}
                           onClick={() => addToCart(product, v)}
-                          className="flex-1 bg-black/10 dark:bg-white/10 hover:bg-amber-500/80 text-white text-xs py-1.5 px-2 rounded-lg transition-colors border border-black/10 dark:border-white/10 text-center truncate"
+                          className="flex-1 bg-black/10 dark:bg-white/10 hover:bg-amber-500/80 text-slate-900 dark:text-white text-xs py-1.5 px-2 rounded-lg transition-colors border border-black/10 dark:border-white/10 text-center truncate"
                         >
                           {v.name}
                         </button>
@@ -431,7 +431,7 @@ export default function POS() {
                     ) : (
                       <button
                         onClick={() => addToCart(product, { id: `default-${product.id}`, name: 'Regular', dine_in_price: 0, online_price: 0 })}
-                        className="w-full bg-black/10 dark:bg-white/10 hover:bg-amber-500/80 text-white text-xs py-2 rounded-lg transition-colors border border-black/10 dark:border-white/10"
+                        className="w-full bg-black/10 dark:bg-white/10 hover:bg-amber-500/80 text-slate-900 dark:text-white text-xs py-2 rounded-lg transition-colors border border-black/10 dark:border-white/10"
                       >
                         {t.addToCart}
                       </button>

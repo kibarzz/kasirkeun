@@ -355,7 +355,7 @@ export default function Menu() {
                   "px-4 py-1.5 rounded-full text-xs font-medium transition-all border whitespace-nowrap",
                   activeCategory === category
                     ? "bg-indigo-500 border-indigo-500 text-white shadow-lg shadow-indigo-500/20"
-                    : "bg-black/5 dark:bg-white/5 border-black/10 dark:border-white/10 text-slate-500 dark:text-white/60 hover:bg-black/10 dark:hover:bg-white/10"
+                    : "bg-black/5 dark:bg-white/5 border-black/10 dark:border-white/10 text-slate-700 dark:text-white/60 hover:bg-black/10 dark:hover:bg-white/10"
                 )}
               >
                 {category === 'All' ? t.all : category}
@@ -521,12 +521,12 @@ export default function Menu() {
                                 <th className="pb-2 font-medium">{t.adjFactor}</th>
                               </tr>
                             </thead>
-                            <tbody className="text-slate-600 dark:text-white/80">
+                            <tbody className="text-slate-900 dark:text-white/80">
                               {variantRecipes.map((recipe, idx) => (
                                 <tr key={idx} className="border-t border-black/5 dark:border-white/5">
-                                  <td className="py-2">{getIngredientName(recipe.ingredient_id)}</td>
-                                  <td className="py-2 font-mono">{recipe.qty}</td>
-                                  <td className="py-2 font-mono">{recipe.adjustment_factor}x</td>
+                                  <td className="py-2 text-slate-900 dark:text-white">{getIngredientName(recipe.ingredient_id)}</td>
+                                  <td className="py-2 font-mono text-slate-900 dark:text-white">{recipe.qty}</td>
+                                  <td className="py-2 font-mono text-slate-900 dark:text-white">{recipe.adjustment_factor}x</td>
                                 </tr>
                               ))}
                             </tbody>
