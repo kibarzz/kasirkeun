@@ -1,14 +1,5 @@
 import { createClient } from '@libsql/client';
 
-if (process.env.NODE_ENV !== 'production') {
-  try {
-    const dotenv = await import('dotenv');
-    dotenv.config();
-  } catch (e) {
-    // dotenv not available or not needed
-  }
-}
-
 const db = createClient({
   url: process.env.TURSO_DATABASE_URL || 'file:cafe.db',
   authToken: process.env.TURSO_AUTH_TOKEN,
@@ -260,8 +251,5 @@ export const initDB = async () => {
 };
 
 // Auto-init for serverless environments
-if (process.env.NODE_ENV === 'production') {
-  initDB().catch(console.error);
-}
-
+// Removed auto-init to prevent startup crashes on Vercel
 export default db;

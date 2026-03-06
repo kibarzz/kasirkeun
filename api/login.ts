@@ -36,9 +36,13 @@ export default async function handler(req: any, res: any) {
       return res.status(400).json({ success: false, message: 'Username and password required' });
     }
 
+    console.log('Attempting DB query...');
     const result = await db.execute({ 
       sql: "SELECT id, username, password, role FROM users WHERE username = ?", 
       args: [username] 
+    }).catch(e => {
+      console.error('DB Execution Error:', e);
+      throw new Error(`Database Error: ${e.message}. URL: ${process.env.TURSO_DATABASE_URL ? 'Set' : 'Not Set'}`);
     });
     
     const user = result.rows[0];
