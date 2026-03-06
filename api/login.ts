@@ -2,10 +2,11 @@ import db from '../src/db';
 
 export default async function handler(req: any, res: any) {
   const method = req.method?.toUpperCase();
-  const url = new URL(req.url || '', `http://${req.headers.host || 'localhost'}`);
+  const host = req.headers.host || 'localhost';
   
-  console.log(`API Request: ${method} ${url.pathname}`);
-
+  console.log(`[DEBUG] Login API called: ${method} on ${host}`);
+  console.log(`[DEBUG] TURSO_DATABASE_URL is ${process.env.TURSO_DATABASE_URL ? 'DEFINED' : 'UNDEFINED'}`);
+  
   if (method === 'OPTIONS') {
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -16,36 +17,48 @@ export default async function handler(req: any, res: any) {
 
   if (method === 'GET') {
     return res.status(200).json({ 
-      message: 'Login endpoint is reachable', 
-      method, 
-      pathname: url.pathname,
-      query: req.query
+      status: 'online',
+      db_url_set: !!process.env.TURSO_DATABASE_URL,
+      db_token_set: !!process.env.TURSO_AUTH_TOKEN,
+      env: process.env.NODE_ENV
     });
   }
 
   if (method !== 'POST') {
-    return res.status(405).json({ 
-      error: `Method ${method} not allowed`, 
-      message: 'This endpoint only accepts POST requests for login.' 
-    });
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    const { username, password } = req.body || {};
+    // Manual body parsing if Vercel fails to parse it
+    let body = req.body;
+    if (typeof body === 'string') {
+      try {
+        body = JSON.parse(body);
+      } catch (e) {
+        console.error('[DEBUG] Body parse error:', e);
+      }
+    }
+
+    const { username, password } = body || {};
+    console.log(`[DEBUG] Login attempt for user: ${username}`);
+
     if (!username || !password) {
       return res.status(400).json({ success: false, message: 'Username and password required' });
     }
 
-    console.log('Attempting DB query...');
+    if (!db) {
+      throw new Error('Database client not initialized');
+    }
+
+    console.log('[DEBUG] Executing SQL query...');
     const result = await db.execute({ 
       sql: "SELECT id, username, password, role FROM users WHERE username = ?", 
       args: [username] 
-    }).catch(e => {
-      console.error('DB Execution Error:', e);
-      throw new Error(`Database Error: ${e.message}. URL: ${process.env.TURSO_DATABASE_URL ? 'Set' : 'Not Set'}`);
     });
     
+    console.log(`[DEBUG] Query result rows: ${result.rows?.length || 0}`);
     const user = result.rows[0];
+    
     if (!user || user.password !== password) {
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
@@ -53,7 +66,12 @@ export default async function handler(req: any, res: any) {
     const { password: _, ...userWithoutPassword } = user;
     return res.status(200).json({ success: true, user: userWithoutPassword });
   } catch (error: any) {
-    console.error('Auth API Error:', error);
-    return res.status(500).json({ error: error.message });
+    console.error('[DEBUG] Auth API Error:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Internal Server Error',
+      debug_error: error.message,
+      db_url_set: !!process.env.TURSO_DATABASE_URL
+    });
   }
 }
