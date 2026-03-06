@@ -1,4 +1,4 @@
-import db from '../src/db';
+import db from '../src/db.js';
 
 export default async function handler(req: any, res: any) {
   const method = req.method?.toUpperCase();
