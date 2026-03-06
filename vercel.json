@@ -12,10 +12,23 @@
     }
   ],
   "rewrites": [
+    { "source": "/api/login", "destination": "/api/auth" },
+    { "source": "/api/dashboard", "destination": "/api/admin" },
+    { "source": "/api/settings", "destination": "/api/admin" },
+    { "source": "/api/users(.*)", "destination": "/api/admin" },
+    { "source": "/api/products(.*)", "destination": "/api/pos" },
+    { "source": "/api/variants(.*)", "destination": "/api/pos" },
+    { "source": "/api/recipes(.*)", "destination": "/api/pos" },
+    { "source": "/api/customers(.*)", "destination": "/api/pos" },
+    { "source": "/api/transactions(.*)", "destination": "/api/pos" },
+    { "source": "/api/promotions(.*)", "destination": "/api/pos" },
+    { "source": "/api/ingredients(.*)", "destination": "/api/inventory" },
+    { "source": "/api/inventory(.*)", "destination": "/api/inventory" },
+    { "source": "/api/overhead(.*)", "destination": "/api/inventory" },
+    { "source": "/api/shift(.*)", "destination": "/api/admin" },
     { "source": "/api/upload-payment", "destination": "/api/upload" },
     { "source": "/api/upload-product-image", "destination": "/api/upload" },
     { "source": "/api/upload(.*)", "destination": "/api/upload" },
-    { "source": "/api/:path*", "destination": "/api/index?path=:path*" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

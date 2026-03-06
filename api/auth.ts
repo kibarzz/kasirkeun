@@ -1,0 +1,40 @@
+import db from '../src/db';
+
+export default async function handler(req: any, res: any) {
+  const method = req.method?.toUpperCase();
+  
+  if (method === 'OPTIONS') {
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept');
+    return res.status(200).end();
+  }
+
+  if (method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  try {
+    const { username, password } = req.body || {};
+    if (!username || !password) {
+      return res.status(400).json({ success: false, message: 'Username and password required' });
+    }
+
+    const result = await db.execute({ 
+      sql: "SELECT id, username, password, role FROM users WHERE username = ?", 
+      args: [username] 
+    });
+    
+    const user = result.rows[0];
+    if (!user || user.password !== password) {
+      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+    }
+
+    const { password: _, ...userWithoutPassword } = user;
+    return res.status(200).json({ success: true, user: userWithoutPassword });
+  } catch (error: any) {
+    console.error('Auth API Error:', error);
+    return res.status(500).json({ error: error.message });
+  }
+}
