@@ -1,71 +1,113 @@
 import db from '../src/db';
 
-export const runtime = 'edge';
+export default async function handler(req: any, res: any) {
+  const originalPath = req.headers['x-forwarded-uri'] || req.url || '';
+  const url = new URL(originalPath, `http://${req.headers.host || 'localhost'}`);
+  
+  // Vercel rewrites might put the path in req.query.path
+  let pathParts = url.pathname.split('/').filter(Boolean);
+  if (req.query && req.query.path) {
+    const qPath = Array.isArray(req.query.path) ? req.query.path : [req.query.path];
+    pathParts = ['api', ...qPath];
+  }
 
-export default async function handler(req: Request) {
-  const url = new URL(req.url);
-  const pathParts = url.pathname.split('/').filter(Boolean);
   const endpoint = pathParts[1]; // 'products', 'transactions', etc.
   const id = pathParts[2];
   const action = pathParts[3];
 
+  // Helper for common CRUD
+  const handleCRUD = async (table: string) => {
+    if (req.method === 'GET') {
+      if (id) {
+        const result = await db.execute({ sql: `SELECT * FROM ${table} WHERE id = ?`, args: [id] });
+        return res.status(200).json(result.rows[0]);
+      }
+      const result = await db.execute(`SELECT * FROM ${table}`);
+      return res.status(200).json(result.rows);
+    }
+    
+    if (req.method === 'POST') {
+      const body = req.body;
+      const keys = Object.keys(body);
+      const values = Object.values(body);
+      const placeholders = keys.map(() => '?').join(', ');
+      const info = await db.execute({
+        sql: `INSERT INTO ${table} (${keys.join(', ')}) VALUES (${placeholders})`,
+        args: values
+      });
+      return res.status(200).json({ id: Number(info.lastInsertRowid) });
+    }
+
+    if (req.method === 'PUT' && id) {
+      const body = req.body;
+      const keys = Object.keys(body);
+      const values = Object.values(body);
+      const setClause = keys.map(k => `${k} = ?`).join(', ');
+      await db.execute({
+        sql: `UPDATE ${table} SET ${setClause} WHERE id = ?`,
+        args: [...values, id]
+      });
+      return res.status(200).json({ success: true });
+    }
+
+    if (req.method === 'DELETE' && id) {
+      await db.execute({ sql: `DELETE FROM ${table} WHERE id = ?`, args: [id] });
+      return res.status(200).json({ success: true });
+    }
+    
+    return res.status(405).json({ error: 'Method not allowed' });
+  };
+
+  console.log(`API Request: ${req.method} ${url.pathname}`);
+  
+  // Manual body parsing fallback if needed
+  if (req.method === 'POST' && typeof req.body === 'string') {
+    try {
+      req.body = JSON.parse(req.body);
+    } catch (e) {
+      console.error('Failed to parse body:', e);
+    }
+  }
+
+  if (req.method === 'OPTIONS') {
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+    res.setHeader(
+      'Access-Control-Allow-Headers',
+      'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
+    );
+    return res.status(200).end();
+  }
+
   try {
-    // Helper for common CRUD
-    const handleCRUD = async (table: string, allowedMethods: string[] = ['GET', 'POST', 'PUT', 'DELETE']) => {
-      if (req.method === 'GET') {
-        if (id) {
-          const res = await db.execute({ sql: `SELECT * FROM ${table} WHERE id = ?`, args: [id] });
-          return new Response(JSON.stringify(res.rows[0]), { status: 200, headers: { 'Content-Type': 'application/json' } });
-        }
-        const res = await db.execute(`SELECT * FROM ${table}`);
-        return new Response(JSON.stringify(res.rows), { status: 200, headers: { 'Content-Type': 'application/json' } });
-      }
-      
-      if (req.method === 'POST') {
-        const body = await req.json();
-        const keys = Object.keys(body);
-        const values = Object.values(body);
-        const placeholders = keys.map(() => '?').join(', ');
-        const info = await db.execute({
-          sql: `INSERT INTO ${table} (${keys.join(', ')}) VALUES (${placeholders})`,
-          args: values
-        });
-        return new Response(JSON.stringify({ id: Number(info.lastInsertRowid) }), { status: 200, headers: { 'Content-Type': 'application/json' } });
-      }
-
-      if (req.method === 'PUT' && id) {
-        const body = await req.json();
-        const keys = Object.keys(body);
-        const values = Object.values(body);
-        const setClause = keys.map(k => `${k} = ?`).join(', ');
-        await db.execute({
-          sql: `UPDATE ${table} SET ${setClause} WHERE id = ?`,
-          args: [...values, id]
-        });
-        return new Response(JSON.stringify({ success: true }), { status: 200, headers: { 'Content-Type': 'application/json' } });
-      }
-
-      if (req.method === 'DELETE' && id) {
-        await db.execute({ sql: `DELETE FROM ${table} WHERE id = ?`, args: [id] });
-        return new Response(JSON.stringify({ success: true }), { status: 200, headers: { 'Content-Type': 'application/json' } });
-      }
-      
-      return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 });
-    };
+    if (endpoint === 'debug') {
+      return res.status(200).json({
+        method: req.method,
+        url: req.url,
+        pathname: url.pathname,
+        pathParts,
+        endpoint,
+        headers: req.headers,
+        body: req.body
+      });
+    }
 
     switch (endpoint) {
+      case 'ping':
+        return res.status(200).json({ message: 'pong', method: req.method, endpoint });
       case 'login':
         if (req.method === 'POST') {
-          const { username, password } = await req.json();
+          const { username, password } = req.body;
           const result = await db.execute({ sql: "SELECT id, username, password, role FROM users WHERE username = ?", args: [username] });
           const user = result.rows[0];
           if (!user || user.password !== password) {
-            return new Response(JSON.stringify({ success: false, message: 'Invalid credentials' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+            return res.status(401).json({ success: false, message: 'Invalid credentials' });
           }
           const { password: _, ...userWithoutPassword } = user;
-          return new Response(JSON.stringify({ success: true, user: userWithoutPassword }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+          return res.status(200).json({ success: true, user: userWithoutPassword });
         }
-        break;
+        return res.status(405).json({ error: 'Method not allowed' });
 
       case 'dashboard':
         if (req.method === 'GET') {
@@ -83,26 +125,26 @@ export default async function handler(req: Request) {
           const lowStockRes = await db.execute('SELECT name, stock, min_stock FROM ingredients WHERE stock <= min_stock');
           const recentTransactionsRes = await db.execute('SELECT id, created_at, type, payment_method, final_amount, status FROM transactions ORDER BY id DESC LIMIT 10');
           
-          return new Response(JSON.stringify({
+          return res.status(200).json({
             totalTransactions: Number(totalTxRes.rows[0].count) || 0,
             omzet: Number(omzetRes.rows[0].total) || 0,
             netProfit: (Number(omzetRes.rows[0].total) || 0) - (Number(hppRes.rows[0].total_hpp) || 0),
             topProducts: topProductsRes.rows,
             lowStock: lowStockRes.rows,
             recentTransactions: recentTransactionsRes.rows
-          }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+          });
         }
-        break;
+        return res.status(405).json({ error: 'Method not allowed' });
 
       case 'products':
-        if (req.method === 'GET') {
+        if (req.method === 'GET' && !id) {
           const productsRes = await db.execute('SELECT * FROM products');
           const variantsRes = await db.execute('SELECT * FROM product_variants');
           const recipesRes = await db.execute('SELECT * FROM recipes');
-          return new Response(JSON.stringify({ products: productsRes.rows, variants: variantsRes.rows, recipes: recipesRes.rows }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+          return res.status(200).json({ products: productsRes.rows, variants: variantsRes.rows, recipes: recipesRes.rows });
         }
-        if (req.method === 'POST') {
-          const { name, category, image_url, variants } = await req.json();
+        if (req.method === 'POST' && !id) {
+          const { name, category, image_url, variants } = req.body;
           const info = await db.execute({ sql: 'INSERT INTO products (name, category, image_url) VALUES (?, ?, ?)', args: [name, category, image_url] });
           const productId = Number(info.lastInsertRowid);
           for (const v of variants) {
@@ -111,7 +153,7 @@ export default async function handler(req: Request) {
               args: [productId, v.name, v.dine_in_price, v.online_price, v.dine_in_discount, v.online_discount]
             });
           }
-          return new Response(JSON.stringify({ id: productId }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+          return res.status(200).json({ id: productId });
         }
         return handleCRUD('products');
 
@@ -120,7 +162,7 @@ export default async function handler(req: Request) {
           if (id && action === 'void') {
             const txRes = await db.execute({ sql: 'SELECT * FROM transactions WHERE id = ?', args: [id] });
             const tx = txRes.rows[0];
-            if (!tx || tx.status === 'voided') return new Response(JSON.stringify({ message: 'Invalid transaction' }), { status: 400 });
+            if (!tx || tx.status === 'voided') return res.status(400).json({ message: 'Invalid transaction' });
             
             const itemsRes = await db.execute({ sql: 'SELECT * FROM transaction_items WHERE transaction_id = ?', args: [id] });
             await db.execute({ sql: "UPDATE transactions SET status = 'voided' WHERE id = ?", args: [id] });
@@ -138,10 +180,10 @@ export default async function handler(req: Request) {
             if (tx.customer_id && tx.type === 'paid') {
               await db.execute({ sql: 'UPDATE customers SET loyalty_visits = loyalty_visits - 1, total_visits = total_visits - 1 WHERE id = ?', args: [tx.customer_id] });
             }
-            return new Response(JSON.stringify({ success: true }), { status: 200 });
+            return res.status(200).json({ success: true });
           }
 
-          const body = await req.json();
+          const body = req.body;
           const info = await db.execute({
             sql: 'INSERT INTO transactions (customer_id, user_id, total_amount, tax_amount, discount_amount, final_amount, payment_method, channel, type, status, payment_proof_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             args: [body.customer_id, body.user_id, body.total_amount, body.tax_amount, body.discount_amount, body.final_amount, body.payment_method, body.channel, body.type, 'completed', body.payment_proof_url || null]
@@ -184,13 +226,13 @@ export default async function handler(req: Request) {
           if (body.applied_promotion_ids) {
             for (const pId of body.applied_promotion_ids) await db.execute({ sql: 'UPDATE promotions SET redemption_count = redemption_count + 1 WHERE id = ?', args: [pId] });
           }
-          return new Response(JSON.stringify({ id: txId }), { status: 200 });
+          return res.status(200).json({ id: txId });
         }
         return handleCRUD('transactions');
 
       case 'inventory':
         if (req.method === 'POST') {
-          const body = await req.json();
+          const body = req.body;
           if (id === 'waste') {
             await db.execute({ sql: 'INSERT INTO waste_logs (ingredient_id, qty, reason) VALUES (?, ?, ?)', args: [body.ingredient_id, body.qty, body.reason] });
             let remaining = body.qty;
@@ -202,7 +244,7 @@ export default async function handler(req: Request) {
               remaining -= d;
             }
             await db.execute({ sql: 'UPDATE ingredients SET stock = stock - ? WHERE id = ?', args: [body.qty, body.ingredient_id] });
-            return new Response(JSON.stringify({ success: true }));
+            return res.status(200).json({ success: true });
           }
           if (id === 'opname') {
             const diff = body.actual_qty - body.expected_qty;
@@ -221,7 +263,7 @@ export default async function handler(req: Request) {
               await db.execute({ sql: 'INSERT INTO ingredient_batches (ingredient_id, qty, unit_cost) VALUES (?, ?, ?)', args: [body.ingredient_id, diff, Number(ing.rows[0]?.unit_cost) || 0] });
             }
             await db.execute({ sql: 'UPDATE ingredients SET stock = ? WHERE id = ?', args: [body.actual_qty, body.ingredient_id] });
-            return new Response(JSON.stringify({ success: true }));
+            return res.status(200).json({ success: true });
           }
           if (id === 'stock-adjustments') {
             await db.execute({ sql: 'INSERT INTO stock_adjustments (ingredient_id, type, qty, reason) VALUES (?, ?, ?, ?)', args: [body.ingredient_id, body.type, body.qty, body.reason] });
@@ -239,45 +281,45 @@ export default async function handler(req: Request) {
               }
               await db.execute({ sql: 'UPDATE ingredients SET stock = stock - ? WHERE id = ?', args: [body.qty, body.ingredient_id] });
             }
-            return new Response(JSON.stringify({ success: true }));
+            return res.status(200).json({ success: true });
           }
         }
         break;
 
       case 'customers':
-        if (endpoint === 'customers' && id === 'search') {
+        if (id === 'search') {
           const q = url.searchParams.get('q') || '';
-          const res = await db.execute({ sql: "SELECT * FROM customers WHERE name LIKE ? OR phone LIKE ?", args: [`%${q}%`, `%${q}%`] });
-          return new Response(JSON.stringify(res.rows));
+          const res_cust = await db.execute({ sql: "SELECT * FROM customers WHERE name LIKE ? OR phone LIKE ?", args: [`%${q}%`, `%${q}%`] });
+          return res.status(200).json(res_cust.rows);
         }
         return handleCRUD('customers');
 
       case 'settings':
         if (req.method === 'GET') {
-          const res = await db.execute('SELECT * FROM settings');
-          const obj = res.rows.reduce((acc: any, curr: any) => { acc[curr.key] = curr.value; return acc; }, {});
-          return new Response(JSON.stringify(obj));
+          const res_set = await db.execute('SELECT * FROM settings');
+          const obj = res_set.rows.reduce((acc: any, curr: any) => { acc[curr.key] = curr.value; return acc; }, {});
+          return res.status(200).json(obj);
         }
         if (req.method === 'POST') {
-          const { key, value } = await req.json();
+          const { key, value } = req.body;
           await db.execute({ sql: 'INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value', args: [key, value] });
-          return new Response(JSON.stringify({ success: true }));
+          return res.status(200).json({ success: true });
         }
         break;
 
       case 'shift':
         if (id === 'summary') {
           const today = new Date().toISOString().split('T')[0];
-          const res = await db.execute({
+          const res_shift = await db.execute({
             sql: 'SELECT COUNT(*) as total_transactions, SUM(final_amount) as total_revenue, SUM(CASE WHEN payment_method LIKE "%Cash%" THEN final_amount ELSE 0 END) as cash_revenue, SUM(CASE WHEN payment_method LIKE "%QRIS%" THEN final_amount ELSE 0 END) as qris_revenue FROM transactions WHERE date(created_at) = ? AND type = "paid"',
             args: [today]
           });
-          return new Response(JSON.stringify(res.rows[0]));
+          return res.status(200).json(res_shift.rows[0]);
         }
         break;
 
       case 'backup':
-        return new Response(JSON.stringify({ message: 'Backups are handled by Turso.', url: 'https://turso.tech/dashboard' }));
+        return res.status(200).json({ message: 'Backups are handled by Turso.', url: 'https://turso.tech/dashboard' });
 
       case 'ingredients': return handleCRUD('ingredients');
       case 'users': return handleCRUD('users');
@@ -287,9 +329,9 @@ export default async function handler(req: Request) {
       case 'recipes': return handleCRUD('recipes');
     }
 
-    return new Response(JSON.stringify({ error: 'Not found' }), { status: 404 });
+    return res.status(404).json({ error: 'Not found' });
   } catch (error: any) {
     console.error('API Error:', error);
-    return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+    return res.status(500).json({ error: error.message });
   }
 }
