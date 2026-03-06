@@ -1,6 +1,7 @@
 import db from '../src/db';
 
 export default async function handler(req: any, res: any) {
+  const method = req.method?.toUpperCase();
   const originalPath = req.headers['x-forwarded-uri'] || req.url || '';
   const url = new URL(originalPath, `http://${req.headers.host || 'localhost'}`);
   
@@ -17,7 +18,7 @@ export default async function handler(req: any, res: any) {
 
   // Helper for common CRUD
   const handleCRUD = async (table: string) => {
-    if (req.method === 'GET') {
+    if (method === 'GET') {
       if (id) {
         const result = await db.execute({ sql: `SELECT * FROM ${table} WHERE id = ?`, args: [id] });
         return res.status(200).json(result.rows[0]);
@@ -26,7 +27,7 @@ export default async function handler(req: any, res: any) {
       return res.status(200).json(result.rows);
     }
     
-    if (req.method === 'POST') {
+    if (method === 'POST') {
       const body = req.body;
       const keys = Object.keys(body);
       const values = Object.values(body);
@@ -38,7 +39,7 @@ export default async function handler(req: any, res: any) {
       return res.status(200).json({ id: Number(info.lastInsertRowid) });
     }
 
-    if (req.method === 'PUT' && id) {
+    if (method === 'PUT' && id) {
       const body = req.body;
       const keys = Object.keys(body);
       const values = Object.values(body);
@@ -50,18 +51,18 @@ export default async function handler(req: any, res: any) {
       return res.status(200).json({ success: true });
     }
 
-    if (req.method === 'DELETE' && id) {
+    if (method === 'DELETE' && id) {
       await db.execute({ sql: `DELETE FROM ${table} WHERE id = ?`, args: [id] });
       return res.status(200).json({ success: true });
     }
     
-    return res.status(405).json({ error: 'Method not allowed' });
+    return res.status(405).json({ error: `Method ${method} not allowed for ${table}` });
   };
 
-  console.log(`API Request: ${req.method} ${url.pathname}`);
+  console.log(`API Request: ${method} ${url.pathname} (Endpoint: ${endpoint})`);
   
-  // Manual body parsing fallback if needed
-  if (req.method === 'POST' && typeof req.body === 'string') {
+  // Manual body parsing fallback
+  if (method === 'POST' && typeof req.body === 'string' && req.body.length > 0) {
     try {
       req.body = JSON.parse(req.body);
     } catch (e) {
@@ -69,36 +70,45 @@ export default async function handler(req: any, res: any) {
     }
   }
 
-  if (req.method === 'OPTIONS') {
+  // Handle CORS Preflight
+  if (method === 'OPTIONS') {
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-    res.setHeader(
-      'Access-Control-Allow-Headers',
-      'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
-    );
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept');
     return res.status(200).end();
+  }
+
+  // Check Database Config
+  if (!process.env.TURSO_DATABASE_URL) {
+    return res.status(500).json({ 
+      error: 'Database not configured', 
+      message: 'Please set TURSO_DATABASE_URL and TURSO_AUTH_TOKEN in Vercel Dashboard.' 
+    });
   }
 
   try {
     if (endpoint === 'debug') {
       return res.status(200).json({
-        method: req.method,
+        method,
         url: req.url,
         pathname: url.pathname,
         pathParts,
         endpoint,
-        headers: req.headers,
-        body: req.body
+        query: req.query,
+        env_status: !!process.env.TURSO_DATABASE_URL
       });
     }
 
     switch (endpoint) {
       case 'ping':
-        return res.status(200).json({ message: 'pong', method: req.method, endpoint });
+        return res.status(200).json({ message: 'pong', method, endpoint });
       case 'login':
-        if (req.method === 'POST') {
-          const { username, password } = req.body;
+        if (method === 'POST') {
+          const { username, password } = req.body || {};
+          if (!username || !password) {
+            return res.status(400).json({ success: false, message: 'Username and password required' });
+          }
           const result = await db.execute({ sql: "SELECT id, username, password, role FROM users WHERE username = ?", args: [username] });
           const user = result.rows[0];
           if (!user || user.password !== password) {
@@ -107,7 +117,7 @@ export default async function handler(req: any, res: any) {
           const { password: _, ...userWithoutPassword } = user;
           return res.status(200).json({ success: true, user: userWithoutPassword });
         }
-        return res.status(405).json({ error: 'Method not allowed' });
+        return res.status(405).json({ error: 'Method not allowed for login' });
 
       case 'dashboard':
         if (req.method === 'GET') {
