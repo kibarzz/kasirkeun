@@ -1,3 +1,4 @@
+export const runtime = 'edge'; // Tambahkan baris ini di paling atas!
 import express from 'express';
 import { createServer as createViteServer } from 'vite';
 import db, { initDB } from './src/db.js';

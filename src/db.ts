@@ -1,7 +1,13 @@
 import { createClient } from '@libsql/client';
-import dotenv from 'dotenv';
 
-dotenv.config();
+if (process.env.NODE_ENV !== 'production') {
+  try {
+    const dotenv = await import('dotenv');
+    dotenv.config();
+  } catch (e) {
+    // dotenv not available or not needed
+  }
+}
 
 const db = createClient({
   url: process.env.TURSO_DATABASE_URL || 'file:cafe.db',
@@ -252,5 +258,10 @@ export const initDB = async () => {
     });
   }
 };
+
+// Auto-init for serverless environments
+if (process.env.NODE_ENV === 'production') {
+  initDB().catch(console.error);
+}
 
 export default db;

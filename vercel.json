@@ -1,0 +1,35 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/*.ts",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": { "distDir": "dist" }
+    }
+  ],
+  "rewrites": [
+    { "source": "/api/login", "destination": "/api/login" },
+    { "source": "/api/settings", "destination": "/api/settings" },
+    { "source": "/api/users(.*)", "destination": "/api/users" },
+    { "source": "/api/ingredients(.*)", "destination": "/api/ingredients" },
+    { "source": "/api/products(.*)", "destination": "/api/products" },
+    { "source": "/api/variants(.*)", "destination": "/api/variants" },
+    { "source": "/api/recipes(.*)", "destination": "/api/recipes" },
+    { "source": "/api/customers(.*)", "destination": "/api/customers" },
+    { "source": "/api/overhead(.*)", "destination": "/api/overhead" },
+    { "source": "/api/shift(.*)", "destination": "/api/shift" },
+    { "source": "/api/transactions(.*)", "destination": "/api/transactions" },
+    { "source": "/api/dashboard", "destination": "/api/dashboard" },
+    { "source": "/api/inventory(.*)", "destination": "/api/inventory" },
+    { "source": "/api/promotions(.*)", "destination": "/api/promotions" },
+    { "source": "/api/backup", "destination": "/api/backup" },
+    { "source": "/api/upload-payment", "destination": "/api/upload" },
+    { "source": "/api/upload-product-image", "destination": "/api/upload" },
+    { "source": "/api/upload(.*)", "destination": "/api/upload" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
