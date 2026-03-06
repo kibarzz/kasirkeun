@@ -1,18 +1,7 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "api/*.ts",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "package.json",
-      "use": "@vercel/static-build",
-      "config": { "distDir": "dist" }
-    }
-  ],
+  "trailingSlash": false,
   "rewrites": [
-    { "source": "/api/login", "destination": "/api/login" },
     { "source": "/api/upload-payment", "destination": "/api/upload" },
     { "source": "/api/upload-product-image", "destination": "/api/upload" },
     { "source": "/api/upload(.*)", "destination": "/api/upload" },

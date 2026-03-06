@@ -2,7 +2,10 @@ import db from '../src/db';
 
 export default async function handler(req: any, res: any) {
   const method = req.method?.toUpperCase();
+  const url = new URL(req.url || '', `http://${req.headers.host || 'localhost'}`);
   
+  console.log(`API Request: ${method} ${url.pathname}`);
+
   if (method === 'OPTIONS') {
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -12,11 +15,19 @@ export default async function handler(req: any, res: any) {
   }
 
   if (method === 'GET') {
-    return res.status(200).json({ message: 'Login endpoint is reachable' });
+    return res.status(200).json({ 
+      message: 'Login endpoint is reachable', 
+      method, 
+      pathname: url.pathname,
+      query: req.query
+    });
   }
 
   if (method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return res.status(405).json({ 
+      error: `Method ${method} not allowed`, 
+      message: 'This endpoint only accepts POST requests for login.' 
+    });
   }
 
   try {
