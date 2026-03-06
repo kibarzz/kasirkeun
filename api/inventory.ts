@@ -7,6 +7,17 @@ export default async function handler(req: any, res: any) {
   const endpoint = pathParts[1]; // 'inventory', 'ingredients', etc.
   const id = pathParts[2];
 
+  console.log(`API Request: ${method} ${url.pathname}`);
+  
+  // Manual body parsing fallback
+  if (method === 'POST' && typeof req.body === 'string' && req.body.length > 0) {
+    try {
+      req.body = JSON.parse(req.body);
+    } catch (e) {
+      console.error('Failed to parse body:', e);
+    }
+  }
+
   if (method === 'OPTIONS') {
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Allow-Origin', '*');

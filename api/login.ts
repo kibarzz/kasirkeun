@@ -11,6 +11,10 @@ export default async function handler(req: any, res: any) {
     return res.status(200).end();
   }
 
+  if (method === 'GET') {
+    return res.status(200).json({ message: 'Login endpoint is reachable' });
+  }
+
   if (method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }

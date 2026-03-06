@@ -12,7 +12,10 @@
     }
   ],
   "rewrites": [
-    { "source": "/api/login", "destination": "/api/auth" },
+    { "source": "/api/login", "destination": "/api/login" },
+    { "source": "/api/upload-payment", "destination": "/api/upload" },
+    { "source": "/api/upload-product-image", "destination": "/api/upload" },
+    { "source": "/api/upload(.*)", "destination": "/api/upload" },
     { "source": "/api/dashboard", "destination": "/api/admin" },
     { "source": "/api/settings", "destination": "/api/admin" },
     { "source": "/api/users(.*)", "destination": "/api/admin" },
@@ -26,9 +29,6 @@
     { "source": "/api/inventory(.*)", "destination": "/api/inventory" },
     { "source": "/api/overhead(.*)", "destination": "/api/inventory" },
     { "source": "/api/shift(.*)", "destination": "/api/admin" },
-    { "source": "/api/upload-payment", "destination": "/api/upload" },
-    { "source": "/api/upload-product-image", "destination": "/api/upload" },
-    { "source": "/api/upload(.*)", "destination": "/api/upload" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
