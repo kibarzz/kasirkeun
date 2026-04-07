@@ -277,6 +277,8 @@ export const translations = {
     onlinePrice: 'Online Price',
     editVariantPrice: 'Edit Variant Price',
     saveVariant: 'Save Variant',
+    confirmDeleteRecipeItem: 'Are you sure you want to delete this recipe item?',
+    failedToDeleteRecipeItem: 'Failed to delete recipe item',
 
     // Promotions.tsx
     promotionsTitle: 'Promotions',
@@ -632,6 +634,8 @@ export const translations = {
     onlinePrice: 'Harga Online',
     editVariantPrice: 'Edit Harga Varian',
     saveVariant: 'Simpan Varian',
+    confirmDeleteRecipeItem: 'Apakah Anda yakin ingin menghapus item resep ini?',
+    failedToDeleteRecipeItem: 'Gagal menghapus item resep',
 
     // Promotions.tsx
     promotionsTitle: 'Promosi',

@@ -47,11 +47,11 @@ export default function Menu() {
   });
 
   // Add Recipe Form State
-  const [newRecipe, setNewRecipe] = useState({
+  const [newRecipeItems, setNewRecipeItems] = useState([{
     ingredient_id: '',
     qty: '',
     adjustment_factor: '1.0'
-  });
+  }]);
 
   const [formError, setFormError] = useState('');
 
@@ -202,41 +202,72 @@ export default function Menu() {
     e.preventDefault();
     setFormError('');
 
-    if (!newRecipe.ingredient_id || !newRecipe.qty || !newRecipe.adjustment_factor) {
+    const validItems = newRecipeItems.filter(item => item.ingredient_id && item.qty && item.adjustment_factor);
+    
+    if (validItems.length === 0) {
       setFormError(t.fillAllRecipeFields);
       return;
     }
 
-    const qty = parseFloat(newRecipe.qty);
-    const adjFactor = parseFloat(newRecipe.adjustment_factor);
-
-    if (isNaN(qty) || qty <= 0 || isNaN(adjFactor) || adjFactor <= 0) {
-      setFormError(t.invalidQtyOrAdjFactor);
-      return;
-    }
-
     try {
-      const response = await fetch('/api/recipes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          product_variant_id: selectedVariantForRecipe.id,
-          ingredient_id: parseInt(newRecipe.ingredient_id),
-          qty: qty,
-          adjustment_factor: adjFactor
-        })
-      });
+      for (const item of validItems) {
+        const qty = parseFloat(item.qty);
+        const adjFactor = parseFloat(item.adjustment_factor);
 
-      if (response.ok) {
-        setIsAddRecipeModalOpen(false);
-        setNewRecipe({ ingredient_id: '', qty: '', adjustment_factor: '1.0' });
-        fetchData();
-      } else {
-        setFormError(t.failedToAddRecipe);
+        if (isNaN(qty) || qty <= 0 || isNaN(adjFactor) || adjFactor <= 0) {
+          continue;
+        }
+
+        await fetch('/api/recipes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            product_variant_id: selectedVariantForRecipe.id,
+            ingredient_id: parseInt(item.ingredient_id),
+            qty: qty,
+            adjustment_factor: adjFactor
+          })
+        });
       }
+
+      setIsAddRecipeModalOpen(false);
+      setNewRecipeItems([{ ingredient_id: '', qty: '', adjustment_factor: '1.0' }]);
+      fetchData();
     } catch (err) {
       setFormError(t.errorOccurred);
     }
+  };
+
+  const handleDeleteRecipe = async (recipeId: number) => {
+    if (!confirm(t.confirmDeleteRecipeItem)) return;
+
+    try {
+      const response = await fetch(`/api/recipes/${recipeId}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        fetchData();
+      } else {
+        alert(t.failedToDeleteRecipeItem);
+      }
+    } catch (err) {
+      alert(t.errorOccurred);
+    }
+  };
+
+  const addRecipeItemField = () => {
+    setNewRecipeItems([...newRecipeItems, { ingredient_id: '', qty: '', adjustment_factor: '1.0' }]);
+  };
+
+  const removeRecipeItemField = (index: number) => {
+    setNewRecipeItems(newRecipeItems.filter((_, i) => i !== index));
+  };
+
+  const updateRecipeItemField = (index: number, field: string, value: string) => {
+    const updated = [...newRecipeItems];
+    updated[index] = { ...updated[index], [field]: value };
+    setNewRecipeItems(updated);
   };
 
   const addVariantField = () => {
@@ -523,10 +554,18 @@ export default function Menu() {
                             </thead>
                             <tbody className="text-slate-900 dark:text-white/80">
                               {variantRecipes.map((recipe, idx) => (
-                                <tr key={idx} className="border-t border-black/5 dark:border-white/5">
+                                <tr key={idx} className="border-t border-black/5 dark:border-white/5 group/row">
                                   <td className="py-2 text-slate-900 dark:text-white">{getIngredientName(recipe.ingredient_id)}</td>
                                   <td className="py-2 font-mono text-slate-900 dark:text-white">{recipe.qty}</td>
                                   <td className="py-2 font-mono text-slate-900 dark:text-white">{recipe.adjustment_factor}x</td>
+                                  <td className="py-2 text-right">
+                                    <button 
+                                      onClick={() => handleDeleteRecipe(recipe.id)}
+                                      className="text-rose-400 opacity-0 group-hover/row:opacity-100 transition-opacity p-1 hover:bg-rose-500/10 rounded-lg"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </td>
                                 </tr>
                               ))}
                             </tbody>
@@ -918,7 +957,7 @@ export default function Menu() {
               </button>
             </div>
             
-            <form onSubmit={handleAddRecipe} className="p-6 space-y-4">
+            <form onSubmit={handleAddRecipe} className="p-6 space-y-4 overflow-y-auto custom-scrollbar">
               <div className="mb-4">
                 <p className="text-sm text-slate-500 dark:text-white/60">{t.addingToVariant}</p>
                 <p className="font-medium text-slate-900 dark:text-white">{selectedProduct?.name} - {selectedVariantForRecipe.name}</p>
@@ -930,46 +969,73 @@ export default function Menu() {
                 </div>
               )}
               
-              <div>
-                <label className="block text-sm font-medium text-slate-500 dark:text-white/60 mb-1">{t.ingredient}</label>
-                <select 
-                  value={newRecipe.ingredient_id}
-                  onChange={e => setNewRecipe({...newRecipe, ingredient_id: e.target.value})}
-                  className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
-                >
-                  <option value="" className="bg-white dark:bg-slate-900 text-slate-500 dark:text-white/50">{t.selectAnIngredient}</option>
-                  {ingredients.map(ing => (
-                    <option key={ing.id} value={ing.id} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
-                      {ing.name} ({ing.unit})
-                    </option>
-                  ))}
-                </select>
+              <div className="space-y-4">
+                {newRecipeItems.map((item, index) => (
+                  <div key={index} className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 relative">
+                    {newRecipeItems.length > 1 && (
+                      <button 
+                        type="button"
+                        onClick={() => removeRecipeItemField(index)}
+                        className="absolute -top-2 -right-2 bg-rose-500 text-white p-1 rounded-full shadow-lg hover:bg-rose-400 transition-colors"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
+                    
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-[10px] uppercase tracking-wider text-slate-400 dark:text-white/40 mb-1">{t.ingredient}</label>
+                        <select 
+                          value={item.ingredient_id}
+                          onChange={e => updateRecipeItemField(index, 'ingredient_id', e.target.value)}
+                          className="w-full bg-white dark:bg-slate-900 border-0 rounded-lg px-3 py-1.5 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500/50 text-sm"
+                        >
+                          <option value="" className="bg-white dark:bg-slate-900 text-slate-500 dark:text-white/50">{t.selectAnIngredient}</option>
+                          {ingredients.map(ing => (
+                            <option key={ing.id} value={ing.id} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
+                              {ing.name} ({ing.unit})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[10px] uppercase tracking-wider text-slate-400 dark:text-white/40 mb-1">{t.quantity}</label>
+                          <input 
+                            type="number" 
+                            step="any"
+                            value={item.qty}
+                            onChange={e => updateRecipeItemField(index, 'qty', e.target.value)}
+                            className="w-full bg-white dark:bg-slate-900 border-0 rounded-lg px-3 py-1.5 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500/50 text-sm font-mono"
+                            placeholder="0"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] uppercase tracking-wider text-slate-400 dark:text-white/40 mb-1">{t.adjFactor}</label>
+                          <input 
+                            type="number" 
+                            step="any"
+                            value={item.adjustment_factor}
+                            onChange={e => updateRecipeItemField(index, 'adjustment_factor', e.target.value)}
+                            className="w-full bg-white dark:bg-slate-900 border-0 rounded-lg px-3 py-1.5 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500/50 text-sm font-mono"
+                            placeholder="1.0"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-500 dark:text-white/60 mb-1">{t.quantity}</label>
-                  <input 
-                    type="number" 
-                    step="any"
-                    value={newRecipe.qty}
-                    onChange={e => setNewRecipe({...newRecipe, qty: e.target.value})}
-                    className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 font-mono"
-                    placeholder="0"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-500 dark:text-white/60 mb-1">{t.adjFactor}</label>
-                  <input 
-                    type="number" 
-                    step="any"
-                    value={newRecipe.adjustment_factor}
-                    onChange={e => setNewRecipe({...newRecipe, adjustment_factor: e.target.value})}
-                    className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 font-mono"
-                    placeholder="1.0"
-                  />
-                </div>
-              </div>
+
+              <button 
+                type="button"
+                onClick={addRecipeItemField}
+                className="w-full py-2 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl text-slate-400 dark:text-white/30 hover:border-indigo-500/50 hover:text-indigo-500 transition-all flex items-center justify-center gap-2 text-sm font-medium"
+              >
+                <Plus className="w-4 h-4" /> {t.addIngredient}
+              </button>
+
               <p className="text-xs text-slate-400 dark:text-white/40">
                 {t.adjFactorDesc}
               </p>
