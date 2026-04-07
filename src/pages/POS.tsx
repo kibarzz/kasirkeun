@@ -280,8 +280,31 @@ export default function POS() {
       }
     }
 
+    let finalCustomerId = customer?.id || null;
+
+    // Auto-create customer if name or phone is provided but no customer is selected
+    if (!finalCustomerId && (customerSearch || customerPhone)) {
+      try {
+        const res = await fetch('/api/customers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            name: customerSearch || `Customer ${customerPhone}`, 
+            phone: customerPhone, 
+            preferences: '' 
+          })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          finalCustomerId = data.id;
+        }
+      } catch (e) {
+        console.error('Failed to auto-create customer', e);
+      }
+    }
+
     const payload = {
-      customer_id: customer?.id || null,
+      customer_id: finalCustomerId,
       user_id: user.id || 1, // Use logged in user
       total_amount: isComplementary ? 0 : subtotal,
       tax_amount: isComplementary ? 0 : tax,
@@ -313,6 +336,7 @@ export default function POS() {
         setCart([]);
         setCustomer(null);
         setCustomerSearch('');
+        setCustomerPhone('');
         setIsRedeeming(false);
         setPaymentProof(null);
         setIsTaxApplied(true);

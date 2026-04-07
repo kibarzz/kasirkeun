@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { DollarSign, Plus, Trash2, Calendar, FileText, Download } from 'lucide-react';
+import { DollarSign, Plus, Trash2, Calendar, FileText, Download, X, ChevronRight } from 'lucide-react';
 import { clsx } from 'clsx';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, BarChart, Bar } from 'recharts';
 import { useLanguage } from '../i18n';
 
 export default function Finance() {
@@ -12,10 +13,13 @@ export default function Finance() {
   const [costs, setCosts] = useState<any[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newCost, setNewCost] = useState({ name: '', type: 'Fixed', amount: '', period: 'Monthly' });
-  const [activeTab, setActiveTab] = useState<'expenses' | 'sales'>('sales');
+  const [activeTab, setActiveTab] = useState<'expenses' | 'sales' | 'daily'>('sales');
 
   // Sales Report State
   const [salesReport, setSalesReport] = useState<any[]>([]);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [dateDetails, setDateDetails] = useState<any[]>([]);
+  const [loadingDetails, setLoadingDetails] = useState(false);
   const [dateRange, setDateRange] = useState({
     startDate: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
     endDate: new Date().toISOString().split('T')[0]
@@ -36,6 +40,21 @@ export default function Finance() {
       setSalesReport(data);
     } catch (error) {
       console.error('Failed to fetch sales report:', error);
+    }
+  };
+
+  const fetchDateDetails = async (date: string) => {
+    setSelectedDate(date);
+    setLoadingDetails(true);
+    try {
+      const res = await fetch(`/api/sales-report/details?date=${date}`);
+      if (!res.ok) throw new Error('Failed to fetch details');
+      const data = await res.json();
+      setDateDetails(data);
+    } catch (error) {
+      console.error('Error fetching date details:', error);
+    } finally {
+      setLoadingDetails(false);
     }
   };
 
@@ -154,7 +173,7 @@ export default function Finance() {
       </div>
 
       <div className="flex border-b border-black/10 dark:border-white/10 w-full overflow-x-auto no-scrollbar">
-        {['sales', 'expenses'].map(tab => (
+        {['sales', 'daily', 'expenses'].map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab as any)}
@@ -163,7 +182,7 @@ export default function Finance() {
               activeTab === tab ? 'border-amber-500 text-amber-400' : 'border-transparent text-slate-400 dark:text-white/40 hover:text-slate-600 dark:text-white/80 hover:border-black/20 dark:border-white/20'
             )}
           >
-            {tab === 'sales' ? t.salesReport : t.overheadExpenses}
+            {tab === 'sales' ? t.salesReport : tab === 'daily' ? t.dailySalesReport : t.overheadExpenses}
           </button>
         ))}
       </div>
@@ -324,6 +343,88 @@ export default function Finance() {
             </div>
           </div>
 
+          <div className="bg-black/5 dark:bg-white/5 backdrop-blur-xl border border-black/10 dark:border-white/10 rounded-3xl p-6 shadow-2xl">
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-6">{t.revenueTrend}</h2>
+            <div className="h-80 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={[...salesReport].reverse()}>
+                  <defs>
+                    <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
+                    </linearGradient>
+                    <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+                  <XAxis 
+                    dataKey="date" 
+                    stroke="#94a3b8" 
+                    fontSize={12}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <YAxis 
+                    stroke="#94a3b8" 
+                    fontSize={12}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(value) => `Rp ${value.toLocaleString()}`}
+                  />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '12px', color: '#fff' }}
+                    itemStyle={{ color: '#fff' }}
+                    formatter={(value: any) => formatCurrency(value)}
+                  />
+                  <Legend />
+                  <Area type="monotone" dataKey="revenue" name={t.revenue} stroke="#f59e0b" fillOpacity={1} fill="url(#colorRevenue)" />
+                  <Area type="monotone" dataKey="profit" name={t.profit} stroke="#10b981" fillOpacity={1} fill="url(#colorProfit)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'daily' && (
+        <div className="flex-1 flex flex-col gap-6">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-black/5 dark:bg-white/5 backdrop-blur-xl border border-black/10 dark:border-white/10 rounded-3xl p-4 shadow-lg">
+            <div className="flex items-center gap-4 w-full md:w-auto">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-slate-500 dark:text-white/60" />
+                <input
+                  type="date"
+                  value={dateRange.startDate}
+                  onChange={(e) => setDateRange({ ...dateRange, startDate: e.target.value })}
+                  className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 text-slate-900 dark:text-white rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500/50 text-sm"
+                />
+              </div>
+              <span className="text-slate-400 dark:text-white/40">{t.to}</span>
+              <div className="flex items-center gap-2">
+                <input
+                  type="date"
+                  value={dateRange.endDate}
+                  onChange={(e) => setDateRange({ ...dateRange, endDate: e.target.value })}
+                  className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 text-slate-900 dark:text-white rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500/50 text-sm"
+                />
+              </div>
+            </div>
+            
+            <div className="flex gap-2 w-full md:w-auto">
+              <button onClick={exportPDF} className="flex-1 md:flex-none bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 px-4 py-2 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 text-sm border border-rose-500/20">
+                <Download className="w-4 h-4" /> PDF
+              </button>
+              <button onClick={exportExcel} className="flex-1 md:flex-none bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 px-4 py-2 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 text-sm border border-emerald-500/20">
+                <Download className="w-4 h-4" /> Excel
+              </button>
+              <button onClick={exportCSV} className="flex-1 md:flex-none bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-400 px-4 py-2 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 text-sm border border-indigo-500/20">
+                <Download className="w-4 h-4" /> CSV
+              </button>
+            </div>
+          </div>
+
           <div className="flex-1 bg-black/5 dark:bg-white/5 backdrop-blur-xl border border-black/10 dark:border-white/10 rounded-3xl p-6 shadow-2xl overflow-hidden flex flex-col min-h-0">
             <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-6">{t.dailyBreakdown}</h2>
             <div className="flex-1 overflow-x-auto custom-scrollbar">
@@ -339,8 +440,15 @@ export default function Finance() {
                 </thead>
                 <tbody className="text-slate-900 dark:text-white/80 text-sm">
                   {salesReport.map((report, idx) => (
-                    <tr key={idx} className="border-b border-black/5 dark:border-white/5 hover:bg-black/5 dark:bg-white/5 transition-colors">
-                      <td className="py-4 font-medium text-slate-900 dark:text-white">{report.date}</td>
+                    <tr 
+                      key={idx} 
+                      onClick={() => fetchDateDetails(report.date)}
+                      className="border-b border-black/5 dark:border-white/5 hover:bg-black/5 dark:bg-white/5 transition-colors cursor-pointer group"
+                    >
+                      <td className="py-4 font-medium text-slate-900 dark:text-white flex items-center gap-2">
+                        {report.date}
+                        <ChevronRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity text-amber-500" />
+                      </td>
                       <td className="py-4 text-right font-mono text-slate-900 dark:text-white">{report.transactions}</td>
                       <td className="py-4 text-right font-mono text-amber-500 dark:text-amber-400">{formatCurrency(report.revenue)}</td>
                       <td className="py-4 text-right font-mono text-rose-500 dark:text-rose-400">{formatCurrency(report.total_hpp)}</td>
@@ -432,6 +540,95 @@ export default function Finance() {
                 </button>
               </div>
             </form>
+          </motion.div>
+        </div>
+      )}
+
+      {selectedDate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-white dark:bg-slate-900 border border-black/10 dark:border-white/10 rounded-3xl p-6 w-full max-w-4xl max-h-[90vh] shadow-2xl flex flex-col"
+          >
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{t.dailySalesReport}</h2>
+                <p className="text-slate-500 dark:text-white/60">{selectedDate}</p>
+              </div>
+              <button 
+                onClick={() => setSelectedDate(null)}
+                className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-full transition-colors"
+              >
+                <X className="w-6 h-6 text-slate-500 dark:text-white/60" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto custom-scrollbar pr-2">
+              {loadingDetails ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="w-8 h-8 border-4 border-amber-500/20 border-t-amber-500 rounded-full animate-spin" />
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {dateDetails.map((tx) => (
+                    <div key={tx.id} className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-2xl p-6">
+                      <div className="flex flex-wrap justify-between items-start gap-4 mb-4 pb-4 border-b border-black/10 dark:border-white/10">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-2">
+                          <div>
+                            <p className="text-xs text-slate-500 dark:text-white/40 uppercase tracking-wider font-semibold">{t.id}</p>
+                            <p className="text-sm font-mono text-slate-900 dark:text-white">#{tx.id}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-slate-500 dark:text-white/40 uppercase tracking-wider font-semibold">{t.time}</p>
+                            <p className="text-sm text-slate-900 dark:text-white">{new Date(tx.created_at).toLocaleTimeString()}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-slate-500 dark:text-white/40 uppercase tracking-wider font-semibold">{t.cashier}</p>
+                            <p className="text-sm text-slate-900 dark:text-white">{tx.cashier}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-slate-500 dark:text-white/40 uppercase tracking-wider font-semibold">{t.method}</p>
+                            <p className="text-sm text-slate-900 dark:text-white">{tx.payment_method}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs text-slate-500 dark:text-white/40 uppercase tracking-wider font-semibold">{t.total}</p>
+                          <p className="text-xl font-bold text-amber-500 dark:text-amber-400 font-mono">{formatCurrency(tx.final_amount)}</p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-3">
+                        {tx.items.map((item: any, i: number) => (
+                          <div key={i} className="flex justify-between items-center text-sm">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 bg-amber-500/10 text-amber-500 rounded-lg flex items-center justify-center font-bold text-xs">
+                                {item.qty}x
+                              </div>
+                              <div>
+                                <p className="font-medium text-slate-900 dark:text-white">{item.product_name}</p>
+                                <p className="text-xs text-slate-500 dark:text-white/40">HPP: {formatCurrency(item.hpp_snapshot)}</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-mono text-slate-900 dark:text-white">{formatCurrency(item.unit_price * item.qty)}</p>
+                              <p className="text-xs text-emerald-500 dark:text-emerald-400 font-mono">
+                                Profit: {formatCurrency((item.unit_price - item.hpp_snapshot) * item.qty)}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                  {dateDetails.length === 0 && (
+                    <div className="text-center py-12 text-slate-500 dark:text-white/40">
+                      {t.noSalesData}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </motion.div>
         </div>
       )}

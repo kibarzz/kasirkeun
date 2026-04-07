@@ -131,6 +131,13 @@ export const translations = {
     preferencesPlaceholder: 'e.g., likes oat milk, prefers sugar-free syrup',
     totalVisits: 'Total Visits',
     loyaltyVisits: 'Loyalty Visits',
+    addCustomer: 'Add Customer',
+    newCustomer: 'New Customer',
+    phone: 'Phone',
+    loyaltyVisitsLabel: 'Loyalty Visits',
+    totalVisitsLabel: 'Total Visits',
+    failedToAddCustomer: 'Failed to add customer',
+    customerAddedSuccess: 'Customer added successfully',
 
     // POS.tsx
     posTitle: 'Point of Sale',
@@ -327,6 +334,7 @@ export const translations = {
     financeSubtitle: 'Manage operational costs and view sales reports',
     addExpense: 'Add Expense',
     salesReport: 'Sales Report',
+    dailySalesReport: 'Daily Sales Report',
     overheadExpenses: 'Overhead Expenses',
     totalFixedCosts: 'Total Fixed Costs',
     totalVariableCosts: 'Total Variable Costs',
@@ -488,6 +496,13 @@ export const translations = {
     preferencesPlaceholder: 'misalnya, suka susu oat, lebih suka sirup bebas gula',
     totalVisits: 'Total Kunjungan',
     loyaltyVisits: 'Kunjungan Loyalitas',
+    addCustomer: 'Tambah Pelanggan',
+    newCustomer: 'Pelanggan Baru',
+    phone: 'Telepon',
+    loyaltyVisitsLabel: 'Kunjungan Loyalitas',
+    totalVisitsLabel: 'Total Kunjungan',
+    failedToAddCustomer: 'Gagal menambahkan pelanggan',
+    customerAddedSuccess: 'Pelanggan berhasil ditambahkan',
 
     // POS.tsx
     posTitle: 'Kasir',
@@ -684,6 +699,7 @@ export const translations = {
     financeSubtitle: 'Kelola biaya operasional dan lihat laporan penjualan',
     addExpense: 'Tambah Pengeluaran',
     salesReport: 'Laporan Penjualan',
+    dailySalesReport: 'Laporan Penjualan Harian',
     overheadExpenses: 'Pengeluaran Overhead',
     totalFixedCosts: 'Total Biaya Tetap',
     totalVariableCosts: 'Total Biaya Variabel',

@@ -243,6 +243,8 @@ export const initDB = async () => {
       'ALTER TABLE promotions ADD COLUMN product_ids TEXT',
       'ALTER TABLE ingredients ADD COLUMN priority TEXT DEFAULT "Medium"',
       'ALTER TABLE transactions ADD COLUMN payment_proof_url TEXT',
+      'ALTER TABLE transactions ADD COLUMN type TEXT',
+      'ALTER TABLE transactions ADD COLUMN status TEXT',
       'ALTER TABLE product_variants ADD COLUMN dine_in_price REAL DEFAULT 0',
       'ALTER TABLE product_variants ADD COLUMN online_price REAL DEFAULT 0',
       'ALTER TABLE product_variants ADD COLUMN dine_in_discount REAL DEFAULT 0',

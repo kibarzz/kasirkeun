@@ -1,10 +1,14 @@
-export const runtime = 'edge'; // Tambahkan baris ini di paling atas!
 import express from 'express';
 import { createServer as createViteServer } from 'vite';
 import db, { initDB } from './src/db.js';
 import path from 'path';
 import fs from 'fs';
 import multer from 'multer';
+
+// Ensure uploads directory exists
+if (!fs.existsSync('uploads')) {
+  fs.mkdirSync('uploads');
+}
 
 const upload = multer({ dest: 'uploads/' });
 
@@ -136,6 +140,23 @@ async function startServer() {
     const p2v2Id = Number(p2v2IdRes.lastInsertRowid);
     await db.execute({ sql: 'INSERT INTO recipes (product_variant_id, ingredient_id, qty, adjustment_factor) VALUES (?, ?, ?, ?)', args: [p2v2Id, coffeeId, 18, 1.05] });
     await db.execute({ sql: 'INSERT INTO recipes (product_variant_id, ingredient_id, qty, adjustment_factor) VALUES (?, ?, ?, ?)', args: [p2v2Id, cupId, 1, 1.0] });
+
+    // Seed dummy customers
+    const customerCountRes = await db.execute('SELECT COUNT(*) as count FROM customers');
+    if (Number(customerCountRes.rows[0].count) === 0) {
+      await db.execute({
+        sql: 'INSERT INTO customers (name, phone, preferences, total_visits, loyalty_visits) VALUES (?, ?, ?, ?, ?)',
+        args: ['Rizki Akbar', '08123456789', 'Suka kopi susu gula aren, less ice', 25, 5]
+      });
+      await db.execute({
+        sql: 'INSERT INTO customers (name, phone, preferences, total_visits, loyalty_visits) VALUES (?, ?, ?, ?, ?)',
+        args: ['Budi Santoso', '08987654321', 'Suka Americano panas, no sugar', 12, 2]
+      });
+      await db.execute({
+        sql: 'INSERT INTO customers (name, phone, preferences, total_visits, loyalty_visits) VALUES (?, ?, ?, ?, ?)',
+        args: ['Siti Aminah', '08556677889', 'Suka Matcha Latte, oat milk', 8, 8]
+      });
+    }
   }
 
 
@@ -930,6 +951,46 @@ async function startServer() {
     }
   });
 
+  app.get('/api/sales-report/details', async (req, res) => {
+    const date = req.query.date as string;
+    if (!date) return res.status(400).json({ error: 'Date is required' });
+
+    try {
+      const transactionsRes = await db.execute({
+        sql: `
+          SELECT t.id, t.final_amount, t.created_at, u.username as cashier, t.payment_method, t.channel
+          FROM transactions t
+          LEFT JOIN users u ON t.user_id = u.id
+          WHERE DATE(t.created_at) = ? AND t.type = 'paid'
+          ORDER BY t.created_at DESC
+        `,
+        args: [date]
+      });
+      const transactions = transactionsRes.rows;
+
+      const itemsRes = await db.execute({
+        sql: `
+          SELECT ti.transaction_id, pv.name as product_name, ti.qty, ti.unit_price, ti.hpp_snapshot
+          FROM transaction_items ti
+          JOIN product_variants pv ON ti.product_variant_id = pv.id
+          WHERE ti.transaction_id IN (SELECT id FROM transactions WHERE DATE(created_at) = ? AND type = 'paid')
+        `,
+        args: [date]
+      });
+      const items = itemsRes.rows;
+
+      const details = transactions.map(t => ({
+        ...t,
+        items: items.filter(i => i.transaction_id === t.id)
+      }));
+
+      res.json(details);
+    } catch (error) {
+      console.error('Error fetching sales report details:', error);
+      res.status(500).json({ error: 'Failed to fetch sales report details' });
+    }
+  });
+
   // Promotions Endpoints
   app.get('/api/promotions', async (req, res) => {
     try {
@@ -1037,6 +1098,12 @@ async function startServer() {
       appType: 'spa',
     });
     app.use(vite.middlewares);
+  } else {
+    const distPath = path.join(process.cwd(), 'dist');
+    app.use(express.static(distPath));
+    app.get('*', (req, res) => {
+      res.sendFile(path.join(distPath, 'index.html'));
+    });
   }
 
   app.listen(PORT, '0.0.0.0', () => {

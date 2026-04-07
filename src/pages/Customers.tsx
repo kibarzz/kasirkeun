@@ -14,6 +14,8 @@ export default function Customers() {
   const [segmentFilter, setSegmentFilter] = useState('all');
   const [editingPreferences, setEditingPreferences] = useState(false);
   const [prefValue, setPrefValue] = useState('');
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [newCustomer, setNewCustomer] = useState({ name: '', phone: '', preferences: '', total_visits: 0, loyalty_visits: 0 });
   const { t, lang } = useLanguage();
 
   useEffect(() => {
@@ -71,6 +73,26 @@ export default function Customers() {
     }
   };
 
+  const handleAddCustomer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await fetch('/api/customers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newCustomer)
+      });
+      if (res.ok) {
+        setIsAddModalOpen(false);
+        setNewCustomer({ name: '', phone: '', preferences: '', total_visits: 0, loyalty_visits: 0 });
+        fetchCustomers();
+      } else {
+        alert(t.failedToAddCustomer);
+      }
+    } catch (error) {
+      console.error('Failed to add customer', error);
+    }
+  };
+
   const getLoyaltyBadge = (visits: number) => {
     if (visits >= 21) return { name: t.platinum, color: 'bg-indigo-400 text-indigo-900 border-indigo-500', rank: 4 };
     if (visits >= 11) return { name: t.gold, color: 'bg-amber-400 text-amber-900 border-amber-500', rank: 3 };
@@ -121,9 +143,18 @@ export default function Customers() {
       animate={{ opacity: 1, y: 0 }}
       className="max-w-7xl mx-auto space-y-8"
     >
-      <div>
-        <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">{t.customersTitle}</h1>
-        <p className="text-slate-500 dark:text-white/60 mt-1">{t.customersSubtitle}</p>
+      <div className="flex justify-between items-end">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">{t.customersTitle}</h1>
+          <p className="text-slate-500 dark:text-white/60 mt-1">{t.customersSubtitle}</p>
+        </div>
+        <button
+          onClick={() => setIsAddModalOpen(true)}
+          className="bg-indigo-500 hover:bg-indigo-600 text-white px-6 py-3 rounded-2xl font-bold transition-all shadow-lg shadow-indigo-500/20 flex items-center gap-2"
+        >
+          <Users className="w-5 h-5" />
+          {t.addCustomer}
+        </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -353,6 +384,97 @@ export default function Customers() {
                   </div>
                 )}
               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Add Customer Modal */}
+      <AnimatePresence>
+        {isAddModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white dark:bg-slate-900 border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+            >
+              <div className="p-6 border-b border-black/10 dark:border-white/10 flex justify-between items-center">
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white">{t.addCustomer}</h2>
+                <button 
+                  onClick={() => setIsAddModalOpen(false)} 
+                  className="text-slate-400 dark:text-white/40 hover:text-slate-900 dark:text-white transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <form onSubmit={handleAddCustomer} className="p-6 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t.name}</label>
+                  <input
+                    type="text"
+                    required
+                    value={newCustomer.name}
+                    onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
+                    className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-3 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                    placeholder="e.g., John Doe"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t.phone}</label>
+                  <input
+                    type="text"
+                    value={newCustomer.phone}
+                    onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
+                    className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-3 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                    placeholder="e.g., 08123456789"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t.preferences}</label>
+                  <textarea
+                    value={newCustomer.preferences}
+                    onChange={(e) => setNewCustomer({ ...newCustomer, preferences: e.target.value })}
+                    className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-3 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none h-24 resize-none"
+                    placeholder={t.preferencesPlaceholder}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t.totalVisitsLabel}</label>
+                    <input
+                      type="number"
+                      value={newCustomer.total_visits}
+                      onChange={(e) => setNewCustomer({ ...newCustomer, total_visits: parseInt(e.target.value) || 0 })}
+                      className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-3 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t.loyaltyVisitsLabel}</label>
+                    <input
+                      type="number"
+                      value={newCustomer.loyalty_visits}
+                      onChange={(e) => setNewCustomer({ ...newCustomer, loyalty_visits: parseInt(e.target.value) || 0 })}
+                      className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-3 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setIsAddModalOpen(false)}
+                    className="flex-1 px-4 py-3 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-white rounded-xl font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                  >
+                    {t.cancel}
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 px-4 py-3 bg-indigo-500 text-white rounded-xl font-bold hover:bg-indigo-600 transition-colors shadow-lg shadow-indigo-500/20"
+                  >
+                    {t.save}
+                  </button>
+                </div>
+              </form>
             </motion.div>
           </div>
         )}
