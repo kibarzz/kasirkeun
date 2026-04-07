@@ -1,4 +1,4 @@
-import db from '../src/db.js';
+import db, { initDB } from '../src/db.js';
 
 export default async function handler(req: any, res: any) {
   const method = req.method?.toUpperCase();
@@ -8,6 +8,14 @@ export default async function handler(req: any, res: any) {
   const id = pathParts[2];
 
   console.log(`API Request: ${method} ${url.pathname}`);
+  
+  // Ensure DB is initialized
+  try {
+    await initDB();
+  } catch (e: any) {
+    console.error('DB Init Error in Inventory:', e);
+    return res.status(500).json({ error: 'Database initialization failed', details: e.message });
+  }
   
   // Manual body parsing fallback
   if ((method === 'POST' || method === 'PUT' || method === 'PATCH') && typeof req.body === 'string' && req.body.length > 0) {
@@ -48,7 +56,7 @@ export default async function handler(req: any, res: any) {
       const placeholders = keys.map(() => '?').join(', ');
       const info = await db.execute({
         sql: `INSERT INTO ${table} (${keys.join(', ')}) VALUES (${placeholders})`,
-        args: values
+        args: values as any[]
       });
       return res.status(200).json({ id: Number(info.lastInsertRowid) });
     }
@@ -61,13 +69,13 @@ export default async function handler(req: any, res: any) {
       const setClause = keys.map(k => `${k} = ?`).join(', ');
       await db.execute({
         sql: `UPDATE ${table} SET ${setClause} WHERE id = ?`,
-        args: [...values, id]
+        args: [...values, id] as any[]
       });
       return res.status(200).json({ success: true });
     }
 
     if (method === 'DELETE' && id) {
-      await db.execute({ sql: `DELETE FROM ${table} WHERE id = ?`, args: [id] });
+      await db.execute({ sql: `DELETE FROM ${table} WHERE id = ?`, args: [id] as any[] });
       return res.status(200).json({ success: true });
     }
     

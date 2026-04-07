@@ -1,4 +1,4 @@
-import db from '../src/db.js';
+import db, { initDB } from '../src/db.js';
 
 export default async function handler(req: any, res: any) {
   const method = req.method?.toUpperCase();
@@ -27,10 +27,16 @@ export default async function handler(req: any, res: any) {
         status: 'online', 
         db: 'connected', 
         turso: !!process.env.TURSO_DATABASE_URL,
-        cloudinary: !!(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET)
+        cloudinary: !!(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET),
+        env: process.env.NODE_ENV
       });
     } catch (e: any) {
-      return res.status(200).json({ status: 'online', db: 'error', error: e.message });
+      return res.status(200).json({ 
+        status: 'online', 
+        db: 'error', 
+        error: e.message,
+        turso_set: !!process.env.TURSO_DATABASE_URL
+      });
     }
   }
 
@@ -40,7 +46,6 @@ export default async function handler(req: any, res: any) {
 
   try {
     // Ensure DB is initialized on login
-    const { initDB } = await import('../src/db.js');
     await initDB();
 
     const { username, password } = req.body || {};
@@ -66,7 +71,9 @@ export default async function handler(req: any, res: any) {
     console.error('Auth API Error:', error);
     return res.status(500).json({ 
       success: false, 
-      message: 'Internal Server Error'
+      message: 'Internal Server Error',
+      error: error.message,
+      stack: error.stack
     });
   }
 }
