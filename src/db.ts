@@ -10,8 +10,18 @@ let isInitialized = false;
 export const initDB = async () => {
   if (isInitialized) return;
   
-  console.log('Initializing database...');
+  console.log('Checking database state...');
   try {
+    // Check if users table exists first (READ operation)
+    const tableCheck = await db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='users'");
+    
+    if (tableCheck.rows.length > 0) {
+      console.log('Database already initialized, skipping setup.');
+      isInitialized = true;
+      return;
+    }
+
+    console.log('Initializing database tables...');
     await db.execute(`
       CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,

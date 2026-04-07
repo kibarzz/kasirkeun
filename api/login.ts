@@ -22,11 +22,15 @@ export default async function handler(req: any, res: any) {
 
   if (method === 'GET') {
     try {
+      const dbUrl = process.env.TURSO_DATABASE_URL || '';
+      const isRemote = dbUrl.startsWith('libsql://') || dbUrl.startsWith('https://');
       await db.execute('SELECT 1');
       return res.status(200).json({ 
         status: 'online', 
         db: 'connected', 
         turso: !!process.env.TURSO_DATABASE_URL,
+        db_type: isRemote ? 'remote' : 'local',
+        db_url_prefix: dbUrl.substring(0, 10) + '...',
         cloudinary: !!(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET),
         env: process.env.NODE_ENV
       });
