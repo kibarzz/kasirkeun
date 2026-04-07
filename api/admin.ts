@@ -42,17 +42,48 @@ export default async function handler(req: any, res: any) {
     if (method === 'GET') {
       if (id) {
         const result = await db.execute({ sql: `SELECT * FROM ${table} WHERE id = ?`, args: [id] });
-        return res.status(200).json(result.rows[0]);
+        const row = result.rows[0];
+        if (row) {
+          // Parse JSON strings back to arrays if needed
+          Object.keys(row).forEach(key => {
+            if (typeof row[key] === 'string' && (row[key].startsWith('[') || row[key].startsWith('{'))) {
+              try {
+                row[key] = JSON.parse(row[key]);
+              } catch (e) {
+                // Not JSON, ignore
+              }
+            }
+          });
+        }
+        return res.status(200).json(row);
       }
       const result = await db.execute(`SELECT * FROM ${table}`);
-      return res.status(200).json(result.rows);
+      const rows = result.rows.map(row => {
+        const newRow = { ...row };
+        Object.keys(newRow).forEach(key => {
+          if (typeof newRow[key] === 'string' && (newRow[key].startsWith('[') || newRow[key].startsWith('{'))) {
+            try {
+              newRow[key] = JSON.parse(newRow[key]);
+            } catch (e) {
+              // Not JSON, ignore
+            }
+          }
+        });
+        return newRow;
+      });
+      return res.status(200).json(rows);
     }
     
     if (method === 'POST') {
-      const body = req.body;
+      const body = { ...req.body };
       const keys = Object.keys(body);
       if (keys.length === 0) return res.status(400).json({ error: 'Empty body' });
-      const values = Object.values(body);
+      
+      // Stringify arrays/objects for SQLite
+      const values = Object.values(body).map(v => 
+        Array.isArray(v) || (v !== null && typeof v === 'object') ? JSON.stringify(v) : v
+      );
+      
       const placeholders = keys.map(() => '?').join(', ');
       const info = await db.execute({
         sql: `INSERT INTO ${table} (${keys.join(', ')}) VALUES (${placeholders})`,
@@ -62,10 +93,15 @@ export default async function handler(req: any, res: any) {
     }
 
     if (method === 'PUT' && id) {
-      const body = req.body;
+      const body = { ...req.body };
       const keys = Object.keys(body);
       if (keys.length === 0) return res.status(400).json({ error: 'Empty body' });
-      const values = Object.values(body);
+      
+      // Stringify arrays/objects for SQLite
+      const values = Object.values(body).map(v => 
+        Array.isArray(v) || (v !== null && typeof v === 'object') ? JSON.stringify(v) : v
+      );
+      
       const setClause = keys.map(k => `${k} = ?`).join(', ');
       await db.execute({
         sql: `UPDATE ${table} SET ${setClause} WHERE id = ?`,

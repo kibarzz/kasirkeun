@@ -15,13 +15,9 @@ export const initDB = async () => {
     // Check if users table exists first (READ operation)
     const tableCheck = await db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='users'");
     
-    if (tableCheck.rows.length > 0) {
-      console.log('Database already initialized, skipping setup.');
-      isInitialized = true;
-      return;
-    }
-
-    console.log('Initializing database tables...');
+    // Run schema updates even if users table exists, but only once per process
+    console.log('Ensuring schema is up to date...');
+    
     await db.execute(`
       CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -38,7 +34,8 @@ export const initDB = async () => {
         unit TEXT,
         stock REAL DEFAULT 0,
         min_stock REAL DEFAULT 0,
-        unit_cost REAL DEFAULT 0
+        unit_cost REAL DEFAULT 0,
+        priority TEXT DEFAULT 'Medium'
       );
     `);
 
@@ -49,7 +46,8 @@ export const initDB = async () => {
         category TEXT,
         base_price REAL DEFAULT 0,
         is_active INTEGER DEFAULT 1,
-        image_url TEXT
+        image_url TEXT,
+        online_base_price REAL DEFAULT 0
       );
     `);
 
@@ -192,6 +190,7 @@ export const initDB = async () => {
         discount_amount REAL,
         start_date DATE,
         end_date DATE,
+        product_ids TEXT,
         redemption_count INTEGER DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
@@ -241,12 +240,15 @@ export const initDB = async () => {
       'ALTER TABLE promotions ADD COLUMN start_date DATE',
       'ALTER TABLE promotions ADD COLUMN end_date DATE',
       'ALTER TABLE promotions ADD COLUMN redemption_count INTEGER DEFAULT 0',
+      'ALTER TABLE promotions ADD COLUMN product_ids TEXT',
+      'ALTER TABLE ingredients ADD COLUMN priority TEXT DEFAULT "Medium"',
       'ALTER TABLE transactions ADD COLUMN payment_proof_url TEXT',
       'ALTER TABLE product_variants ADD COLUMN dine_in_price REAL DEFAULT 0',
       'ALTER TABLE product_variants ADD COLUMN online_price REAL DEFAULT 0',
       'ALTER TABLE product_variants ADD COLUMN dine_in_discount REAL DEFAULT 0',
       'ALTER TABLE product_variants ADD COLUMN online_discount REAL DEFAULT 0'
     ];
+
 
     for (const sql of alterColumns) {
       try {
