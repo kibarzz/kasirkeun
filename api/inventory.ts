@@ -146,6 +146,10 @@ export default async function handler(req: any, res: any) {
     return res.status(404).json({ error: 'Inventory Endpoint Not found' });
   } catch (error: any) {
     console.error('Inventory API Error:', error);
-    return res.status(500).json({ error: error.message });
+    let message = error.message;
+    if (error.message?.includes('write operations are forbidden')) {
+      message = 'Database is in Read-Only mode. Please check your TURSO_AUTH_TOKEN in Vercel settings.';
+    }
+    return res.status(500).json({ error: message });
   }
 }

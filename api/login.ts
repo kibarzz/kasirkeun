@@ -29,6 +29,7 @@ export default async function handler(req: any, res: any) {
         status: 'online', 
         db: 'connected', 
         turso: !!process.env.TURSO_DATABASE_URL,
+        turso_token: !!process.env.TURSO_AUTH_TOKEN,
         db_type: isRemote ? 'remote' : 'local',
         db_url_prefix: dbUrl.substring(0, 10) + '...',
         cloudinary: !!(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET),
@@ -73,9 +74,13 @@ export default async function handler(req: any, res: any) {
     return res.status(200).json({ success: true, user: userWithoutPassword });
   } catch (error: any) {
     console.error('Auth API Error:', error);
+    let message = 'Internal Server Error';
+    if (error.message?.includes('write operations are forbidden')) {
+      message = 'Database is in Read-Only mode. Please check your TURSO_AUTH_TOKEN in Vercel settings.';
+    }
     return res.status(500).json({ 
       success: false, 
-      message: 'Internal Server Error',
+      message,
       error: error.message,
       stack: error.stack
     });
