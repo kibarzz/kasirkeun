@@ -93,7 +93,7 @@ export default async function handler(req: any, res: any) {
           const totalTxRes = await db.execute({ sql: 'SELECT COUNT(*) as count FROM transactions WHERE date(created_at) = ?', args: [today] });
           const omzetRes = await db.execute({ sql: "SELECT SUM(final_amount) as total FROM transactions WHERE date(created_at) = ? AND type = 'paid'", args: [today] });
           const hppRes = await db.execute({
-            sql: 'SELECT SUM(ti.qty * ti.hpp_snapshot) as total_hpp FROM transaction_items ti JOIN transactions t ON ti.transaction_id = t.id WHERE date(t.created_at) = ? AND t.type = "paid"',
+            sql: "SELECT SUM(ti.qty * ti.hpp_snapshot) as total_hpp FROM transaction_items ti JOIN transactions t ON ti.transaction_id = t.id WHERE date(t.created_at) = ? AND t.type = 'paid'",
             args: [today]
           });
 
@@ -101,7 +101,7 @@ export default async function handler(req: any, res: any) {
           const prevTxRes = await db.execute({ sql: 'SELECT COUNT(*) as count FROM transactions WHERE date(created_at) = ?', args: [yesterday] });
           const prevOmzetRes = await db.execute({ sql: "SELECT SUM(final_amount) as total FROM transactions WHERE date(created_at) = ? AND type = 'paid'", args: [yesterday] });
           const prevHppRes = await db.execute({
-            sql: 'SELECT SUM(ti.qty * ti.hpp_snapshot) as total_hpp FROM transaction_items ti JOIN transactions t ON ti.transaction_id = t.id WHERE date(t.created_at) = ? AND t.type = "paid"',
+            sql: "SELECT SUM(ti.qty * ti.hpp_snapshot) as total_hpp FROM transaction_items ti JOIN transactions t ON ti.transaction_id = t.id WHERE date(t.created_at) = ? AND t.type = 'paid'",
             args: [yesterday]
           });
 
@@ -183,7 +183,7 @@ export default async function handler(req: any, res: any) {
         if (id === 'summary') {
           const today = new Date().toISOString().split('T')[0];
           const res_shift = await db.execute({
-            sql: 'SELECT COUNT(*) as total_transactions, SUM(final_amount) as total_revenue, SUM(CASE WHEN payment_method LIKE "%Cash%" THEN final_amount ELSE 0 END) as cash_revenue, SUM(CASE WHEN payment_method LIKE "%QRIS%" THEN final_amount ELSE 0 END) as qris_revenue FROM transactions WHERE date(created_at) = ? AND type = "paid"',
+            sql: "SELECT COUNT(*) as total_transactions, SUM(final_amount) as total_revenue, SUM(CASE WHEN payment_method LIKE '%Cash%' THEN final_amount ELSE 0 END) as cash_revenue, SUM(CASE WHEN payment_method LIKE '%QRIS%' THEN final_amount ELSE 0 END) as qris_revenue FROM transactions WHERE date(created_at) = ? AND type = 'paid'",
             args: [today]
           });
           return res.status(200).json(res_shift.rows[0]);
