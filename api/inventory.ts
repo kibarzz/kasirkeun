@@ -10,12 +10,16 @@ export default async function handler(req: any, res: any) {
   console.log(`API Request: ${method} ${url.pathname}`);
   
   // Manual body parsing fallback
-  if (method === 'POST' && typeof req.body === 'string' && req.body.length > 0) {
+  if ((method === 'POST' || method === 'PUT' || method === 'PATCH') && typeof req.body === 'string' && req.body.length > 0) {
     try {
       req.body = JSON.parse(req.body);
     } catch (e) {
       console.error('Failed to parse body:', e);
     }
+  }
+
+  if (!req.body && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
+    req.body = {};
   }
 
   if (method === 'OPTIONS') {
@@ -39,6 +43,7 @@ export default async function handler(req: any, res: any) {
     if (method === 'POST') {
       const body = req.body;
       const keys = Object.keys(body);
+      if (keys.length === 0) return res.status(400).json({ error: 'Empty body' });
       const values = Object.values(body);
       const placeholders = keys.map(() => '?').join(', ');
       const info = await db.execute({
@@ -51,6 +56,7 @@ export default async function handler(req: any, res: any) {
     if (method === 'PUT' && id) {
       const body = req.body;
       const keys = Object.keys(body);
+      if (keys.length === 0) return res.status(400).json({ error: 'Empty body' });
       const values = Object.values(body);
       const setClause = keys.map(k => `${k} = ?`).join(', ');
       await db.execute({

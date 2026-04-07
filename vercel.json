@@ -18,6 +18,7 @@
     { "source": "/api/inventory(.*)", "destination": "/api/inventory" },
     { "source": "/api/overhead(.*)", "destination": "/api/inventory" },
     { "source": "/api/shift(.*)", "destination": "/api/admin" },
+    { "source": "/api/sales-report(.*)", "destination": "/api/admin" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

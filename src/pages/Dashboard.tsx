@@ -5,14 +5,14 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../i18n';
 
-const data = [
-  { name: 'Mon', sales: 4000 },
-  { name: 'Tue', sales: 3000 },
-  { name: 'Wed', sales: 2000 },
-  { name: 'Thu', sales: 2780 },
-  { name: 'Fri', sales: 1890 },
-  { name: 'Sat', sales: 2390 },
-  { name: 'Sun', sales: 3490 },
+const defaultData = [
+  { name: 'Mon', sales: 0 },
+  { name: 'Tue', sales: 0 },
+  { name: 'Wed', sales: 0 },
+  { name: 'Thu', sales: 0 },
+  { name: 'Fri', sales: 0 },
+  { name: 'Sat', sales: 0 },
+  { name: 'Sun', sales: 0 },
 ];
 
 export default function Dashboard() {
@@ -85,21 +85,21 @@ export default function Dashboard() {
           title={t.totalOmzet} 
           value={formatCurrency(stats?.omzet || 0)} 
           icon={DollarSign} 
-          trend="+12.5%" 
+          trend={stats?.trends?.omzet || "0%"} 
           color="from-emerald-500 to-teal-400" 
         />
         <StatCard 
           title={t.netProfit} 
           value={formatCurrency(stats?.netProfit || 0)} 
           icon={TrendingUp} 
-          trend="+8.2%" 
+          trend={stats?.trends?.profit || "0%"} 
           color="from-blue-500 to-indigo-400" 
         />
         <StatCard 
           title={t.transactions} 
           value={stats?.totalTransactions || 0} 
           icon={Users} 
-          trend="+5.1%" 
+          trend={stats?.trends?.transactions || "0%"} 
           color="from-amber-500 to-orange-400" 
         />
         <StatCard 
@@ -118,7 +118,7 @@ export default function Dashboard() {
           <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-6">{t.revenueTrend}</h2>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+              <AreaChart data={stats?.revenueTrend?.length > 0 ? stats.revenueTrend : defaultData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3}/>
