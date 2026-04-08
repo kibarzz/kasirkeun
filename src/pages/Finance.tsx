@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { DollarSign, Plus, Trash2, Calendar, FileText, Download, X, ChevronRight } from 'lucide-react';
+import { DollarSign, Plus, Trash2, Calendar, FileText, Download, X, ChevronRight, MessageSquare } from 'lucide-react';
 import { clsx } from 'clsx';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -13,6 +13,7 @@ export default function Finance() {
   const [costs, setCosts] = useState<any[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newCost, setNewCost] = useState({ name: '', type: 'Fixed', amount: '', period: 'Monthly' });
+  const [deletingCostId, setDeletingCostId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<'expenses' | 'sales' | 'daily'>('sales');
 
   // Sales Report State
@@ -87,10 +88,9 @@ export default function Finance() {
   };
 
   const handleDeleteCost = async (id: number) => {
-    if (confirm(t.confirmDeleteCost)) {
-      await fetch(`/api/overhead/${id}`, { method: 'DELETE' });
-      fetchCosts();
-    }
+    await fetch(`/api/overhead/${id}`, { method: 'DELETE' });
+    fetchCosts();
+    setDeletingCostId(null);
   };
 
   const formatCurrency = (amount: number) => {
@@ -263,7 +263,7 @@ export default function Finance() {
                   <td className="py-4 text-right font-mono text-amber-500 dark:text-amber-400">{formatCurrency(cost.amount)}</td>
                   <td className="py-4 text-right">
                     <button 
-                      onClick={() => handleDeleteCost(cost.id)}
+                      onClick={() => setDeletingCostId(cost.id)}
                       className="p-2 hover:bg-rose-500/20 text-rose-500 dark:text-rose-400 rounded-lg transition-colors"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -599,25 +599,40 @@ export default function Finance() {
                       </div>
 
                       <div className="space-y-3">
-                        {tx.items.map((item: any, i: number) => (
-                          <div key={i} className="flex justify-between items-center text-sm">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 bg-amber-500/10 text-amber-500 rounded-lg flex items-center justify-center font-bold text-xs">
-                                {item.qty}x
+                        {tx.items.map((item: any, i: number) => {
+                          const modifiers = item.modifiers ? JSON.parse(item.modifiers) : {};
+                          return (
+                            <div key={i} className="flex justify-between items-start text-sm">
+                              <div className="flex items-start gap-3">
+                                <div className="w-8 h-8 bg-amber-500/10 text-amber-500 rounded-lg flex items-center justify-center font-bold text-xs mt-1">
+                                  {item.qty}x
+                                </div>
+                                <div>
+                                  <p className="font-medium text-slate-900 dark:text-white">{item.product_name}</p>
+                                  <div className="flex flex-wrap gap-1 mt-1">
+                                    {Object.entries(modifiers).map(([key, value]) => (
+                                      <span key={key} className="text-[10px] bg-black/10 dark:bg-white/10 px-1.5 py-0.5 rounded text-slate-500 dark:text-white/40">
+                                        {t[key]}: {t[String(value).toLowerCase()]}
+                                      </span>
+                                    ))}
+                                  </div>
+                                  {item.notes && (
+                                    <p className="text-[10px] text-amber-500/80 italic mt-1 flex items-center gap-1">
+                                      <MessageSquare className="w-2.5 h-2.5" /> {item.notes}
+                                    </p>
+                                  )}
+                                  <p className="text-xs text-slate-500 dark:text-white/40 mt-1">HPP: {formatCurrency(item.hpp_snapshot)}</p>
+                                </div>
                               </div>
-                              <div>
-                                <p className="font-medium text-slate-900 dark:text-white">{item.product_name}</p>
-                                <p className="text-xs text-slate-500 dark:text-white/40">HPP: {formatCurrency(item.hpp_snapshot)}</p>
+                              <div className="text-right">
+                                <p className="font-mono text-slate-900 dark:text-white">{formatCurrency(item.unit_price * item.qty)}</p>
+                                <p className="text-xs text-emerald-500 dark:text-emerald-400 font-mono">
+                                  Profit: {formatCurrency((item.unit_price - item.hpp_snapshot) * item.qty)}
+                                </p>
                               </div>
                             </div>
-                            <div className="text-right">
-                              <p className="font-mono text-slate-900 dark:text-white">{formatCurrency(item.unit_price * item.qty)}</p>
-                              <p className="text-xs text-emerald-500 dark:text-emerald-400 font-mono">
-                                Profit: {formatCurrency((item.unit_price - item.hpp_snapshot) * item.qty)}
-                              </p>
-                            </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   ))}
@@ -628,6 +643,38 @@ export default function Finance() {
                   )}
                 </div>
               )}
+            </div>
+          </motion.div>
+        </div>
+      )}
+      {/* Delete Confirmation Modal */}
+      {deletingCostId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white dark:bg-slate-900 border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl w-full max-w-md p-6"
+          >
+            <div className="flex items-center gap-3 text-rose-500 mb-4">
+              <Trash2 className="w-6 h-6" />
+              <h3 className="text-xl font-bold">{t.confirmDeleteCost}</h3>
+            </div>
+            <p className="text-slate-600 dark:text-white/70 mb-6">
+              {t.deleteCostWarning || "Are you sure you want to delete this cost entry? This action cannot be undone."}
+            </p>
+            <div className="flex gap-3">
+              <button 
+                onClick={() => setDeletingCostId(null)}
+                className="flex-1 px-4 py-2 rounded-xl font-medium text-slate-500 dark:text-white/60 hover:text-slate-900 dark:text-white hover:bg-black/5 dark:bg-white/5 transition-colors"
+              >
+                {t.cancel}
+              </button>
+              <button 
+                onClick={() => handleDeleteCost(deletingCostId)}
+                className="flex-1 px-4 py-2 rounded-xl font-medium bg-rose-500 hover:bg-rose-400 text-white transition-colors shadow-lg shadow-rose-500/20"
+              >
+                {t.delete}
+              </button>
             </div>
           </motion.div>
         </div>

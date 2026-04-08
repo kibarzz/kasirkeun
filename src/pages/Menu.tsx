@@ -1,5 +1,5 @@
 import React, { useState, useEffect, FormEvent } from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Coffee, Plus, Search, Layers, ChevronRight, X, Trash2 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useLanguage } from '../i18n';
@@ -21,6 +21,8 @@ export default function Menu() {
   const [isAddRecipeModalOpen, setIsAddRecipeModalOpen] = useState(false);
   const [selectedVariantForRecipe, setSelectedVariantForRecipe] = useState<any>(null);
   const [selectedVariantForEdit, setSelectedVariantForEdit] = useState<any>(null);
+  const [deletingProductId, setDeletingProductId] = useState<number | null>(null);
+  const [deletingRecipeItemId, setDeletingRecipeItemId] = useState<number | null>(null);
 
   // Add Product Form State
   const [newProduct, setNewProduct] = useState({
@@ -150,13 +152,12 @@ export default function Menu() {
   };
 
   const handleDeleteProduct = async (id: number) => {
-    if (!confirm(t.confirmDeleteProduct)) return;
-
     try {
       const response = await fetch(`/api/products/${id}`, { method: 'DELETE' });
       if (response.ok) {
         setSelectedProduct(null);
         fetchData();
+        setDeletingProductId(null);
       } else {
         alert(t.failedToDeleteProduct);
       }
@@ -239,8 +240,6 @@ export default function Menu() {
   };
 
   const handleDeleteRecipe = async (recipeId: number) => {
-    if (!confirm(t.confirmDeleteRecipeItem)) return;
-
     try {
       const response = await fetch(`/api/recipes/${recipeId}`, {
         method: 'DELETE'
@@ -248,6 +247,7 @@ export default function Menu() {
 
       if (response.ok) {
         fetchData();
+        setDeletingRecipeItemId(null);
       } else {
         alert(t.failedToDeleteRecipeItem);
       }
@@ -413,7 +413,12 @@ export default function Menu() {
                 >
                   <div className="flex items-center gap-4">
                     {product.image_url ? (
-                      <img src={product.image_url} alt={product.name} className="w-12 h-12 rounded-xl object-cover shrink-0" />
+                      <img 
+                        src={product.image_url} 
+                        alt={product.name} 
+                        className="w-12 h-12 rounded-xl object-cover shrink-0" 
+                        referrerPolicy="no-referrer"
+                      />
                     ) : (
                       <div className="w-12 h-12 rounded-xl bg-black/10 dark:bg-white/10 flex items-center justify-center shrink-0">
                         <Coffee className="w-6 h-6 text-slate-400 dark:text-white/40" />
@@ -446,7 +451,12 @@ export default function Menu() {
               <div className="flex justify-between items-start mb-8">
                 <div className="flex items-center gap-6">
                   {selectedProduct.image_url ? (
-                    <img src={selectedProduct.image_url} alt={selectedProduct.name} className="w-24 h-24 rounded-2xl object-cover shadow-lg" />
+                    <img 
+                      src={selectedProduct.image_url} 
+                      alt={selectedProduct.name} 
+                      className="w-24 h-24 rounded-2xl object-cover shadow-lg" 
+                      referrerPolicy="no-referrer"
+                    />
                   ) : (
                     <div className="w-24 h-24 rounded-2xl bg-black/10 dark:bg-white/10 flex items-center justify-center shadow-lg">
                       <Coffee className="w-10 h-10 text-slate-400 dark:text-white/40" />
@@ -474,7 +484,7 @@ export default function Menu() {
                     {t.editDetails}
                   </button>
                   <button 
-                    onClick={() => handleDeleteProduct(selectedProduct.id)}
+                    onClick={() => setDeletingProductId(selectedProduct.id)}
                     className="text-rose-400 hover:text-rose-300 transition-colors p-2 bg-rose-500/10 rounded-xl border border-rose-500/20"
                   >
                     <Trash2 className="w-5 h-5" />
@@ -560,7 +570,7 @@ export default function Menu() {
                                   <td className="py-2 font-mono text-slate-900 dark:text-white">{recipe.adjustment_factor}x</td>
                                   <td className="py-2 text-right">
                                     <button 
-                                      onClick={() => handleDeleteRecipe(recipe.id)}
+                                      onClick={() => setDeletingRecipeItemId(recipe.id)}
                                       className="text-rose-400 opacity-0 group-hover/row:opacity-100 transition-opacity p-1 hover:bg-rose-500/10 rounded-lg"
                                     >
                                       <Trash2 className="w-4 h-4" />
@@ -622,7 +632,12 @@ export default function Menu() {
                     <label className="block text-sm font-medium text-slate-500 dark:text-white/60 mb-1">{t.productImage}</label>
                     <div className="flex items-center gap-4">
                       {newProduct.image_url && (
-                        <img src={newProduct.image_url} alt="Preview" className="w-16 h-16 rounded-xl object-cover border border-black/10 dark:border-white/10" />
+                        <img 
+                          src={newProduct.image_url} 
+                          alt="Preview" 
+                          className="w-16 h-16 rounded-xl object-cover border border-black/10 dark:border-white/10" 
+                          referrerPolicy="no-referrer"
+                        />
                       )}
                       <input 
                         type="file" 
@@ -790,7 +805,12 @@ export default function Menu() {
                     <label className="block text-sm font-medium text-slate-500 dark:text-white/60 mb-1">{t.productImage}</label>
                     <div className="flex items-center gap-4">
                       {editProductForm.image_url && (
-                        <img src={editProductForm.image_url} alt="Preview" className="w-16 h-16 rounded-xl object-cover border border-black/10 dark:border-white/10" />
+                        <img 
+                          src={editProductForm.image_url} 
+                          alt="Preview" 
+                          className="w-16 h-16 rounded-xl object-cover border border-black/10 dark:border-white/10" 
+                          referrerPolicy="no-referrer"
+                        />
                       )}
                       <input 
                         type="file" 
@@ -1059,6 +1079,77 @@ export default function Menu() {
           </motion.div>
         </div>
       )}
+      {/* Delete Product Confirmation Modal */}
+      <AnimatePresence>
+        {deletingProductId && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white dark:bg-slate-900 border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl w-full max-w-md p-6"
+            >
+              <div className="flex items-center gap-3 text-rose-500 mb-4">
+                <Trash2 className="w-6 h-6" />
+                <h3 className="text-xl font-bold">{t.confirmDeleteProduct}</h3>
+              </div>
+              <p className="text-slate-600 dark:text-white/70 mb-6">
+                {t.deleteProductWarning || "Are you sure you want to delete this product? This will also delete all its variants and recipes. This action cannot be undone."}
+              </p>
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => setDeletingProductId(null)}
+                  className="flex-1 px-4 py-2 rounded-xl font-medium text-slate-500 dark:text-white/60 hover:text-slate-900 dark:text-white hover:bg-black/5 dark:bg-white/5 transition-colors"
+                >
+                  {t.cancel}
+                </button>
+                <button 
+                  onClick={() => handleDeleteProduct(deletingProductId)}
+                  className="flex-1 px-4 py-2 rounded-xl font-medium bg-rose-500 hover:bg-rose-400 text-white transition-colors shadow-lg shadow-rose-500/20"
+                >
+                  {t.delete}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Recipe Item Confirmation Modal */}
+      <AnimatePresence>
+        {deletingRecipeItemId && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white dark:bg-slate-900 border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl w-full max-w-md p-6"
+            >
+              <div className="flex items-center gap-3 text-rose-500 mb-4">
+                <Trash2 className="w-6 h-6" />
+                <h3 className="text-xl font-bold">{t.confirmDeleteRecipeItem}</h3>
+              </div>
+              <p className="text-slate-600 dark:text-white/70 mb-6">
+                {t.deleteRecipeItemWarning || "Are you sure you want to remove this ingredient from the recipe?"}
+              </p>
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => setDeletingRecipeItemId(null)}
+                  className="flex-1 px-4 py-2 rounded-xl font-medium text-slate-500 dark:text-white/60 hover:text-slate-900 dark:text-white hover:bg-black/5 dark:bg-white/5 transition-colors"
+                >
+                  {t.cancel}
+                </button>
+                <button 
+                  onClick={() => handleDeleteRecipe(deletingRecipeItemId)}
+                  className="flex-1 px-4 py-2 rounded-xl font-medium bg-rose-500 hover:bg-rose-400 text-white transition-colors shadow-lg shadow-rose-500/20"
+                >
+                  {t.delete}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

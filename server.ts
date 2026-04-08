@@ -406,6 +406,14 @@ async function startServer() {
     res.json({ success: true });
   });
 
+  app.delete('/api/customers/:id', async (req, res) => {
+    await db.execute({
+      sql: 'DELETE FROM customers WHERE id = ?',
+      args: [req.params.id]
+    });
+    res.json({ success: true });
+  });
+
   app.get('/api/customers/search', async (req, res) => {
     const q = req.query.q as string;
     if (!q) return res.json([]);
@@ -533,13 +541,41 @@ async function startServer() {
         const recipeItems = recipeItemsRes.rows;
         
         const itemInfo = await db.execute({
-          sql: 'INSERT INTO transaction_items (transaction_id, product_variant_id, qty, unit_price, hpp_snapshot) VALUES (?, ?, ?, ?, ?)',
-          args: [txId, item.product_variant_id, item.qty, item.unit_price, 0]
+          sql: 'INSERT INTO transaction_items (transaction_id, product_variant_id, qty, unit_price, hpp_snapshot, notes, modifiers) VALUES (?, ?, ?, ?, ?, ?, ?)',
+          args: [txId, item.product_variant_id, item.qty, item.unit_price, 0, item.notes || null, item.modifiers ? JSON.stringify(item.modifiers) : null]
         });
         const transactionItemId = Number(itemInfo.lastInsertRowid);
 
+        // Identify extra ingredients from modifiers
+        // Example: milk: 'Oat' might mean extra cost if the base recipe uses 'Normal' milk
+        // For simplicity, we'll assume modifiers like 'Oat', 'Almond', 'Soy' replace the base milk
+        // and 'Extra' increases quantity.
+        // We need to find which ingredient in the recipe is "Milk" or "Sugar" etc.
+        
         for (const rItem of recipeItems) {
-          const totalDeduction = Number(rItem.qty) * item.qty * Number(rItem.adjustment_factor);
+          let adjustmentFactor = Number(rItem.adjustment_factor);
+          
+          // Apply modifier logic
+          if (item.modifiers) {
+            const ingName = String(rItem.ingredient_name || '').toLowerCase();
+            const ingRes = await db.execute({ sql: 'SELECT name FROM ingredients WHERE id = ?', args: [rItem.ingredient_id] });
+            const realIngName = String(ingRes.rows[0]?.name || '').toLowerCase();
+
+            // Sugar Level Logic
+            if (realIngName.includes('sugar') || realIngName.includes('gula')) {
+              if (item.modifiers.sugar === 'Less') adjustmentFactor *= 0.5;
+              if (item.modifiers.sugar === 'No') adjustmentFactor = 0;
+            }
+
+            // Ice Level Logic
+            if (realIngName.includes('ice') || realIngName.includes('es batu')) {
+              if (item.modifiers.iceLevel === 'Less') adjustmentFactor *= 0.5;
+              if (item.modifiers.iceLevel === 'No' || item.modifiers.temp === 'Hot') adjustmentFactor = 0;
+            }
+          }
+
+          const totalDeduction = Number(rItem.qty) * item.qty * adjustmentFactor;
+          if (totalDeduction <= 0) continue;
           
           // FIFO Deduction Logic
           let remainingToDeduct = totalDeduction;
@@ -651,23 +687,28 @@ async function startServer() {
           args: [item.id]
         });
         const itemBatches = itemBatchesRes.rows;
+        
+        // Group by ingredient_id to update main ingredients table correctly
+        const ingredientReturns: Record<number, number> = {};
+
         for (const ib of itemBatches) {
           await db.execute({
             sql: 'UPDATE ingredient_batches SET qty = qty + ? WHERE id = ?',
             args: [ib.qty, ib.batch_id]
           });
+
+          // Get the ingredient_id for this batch to update the main stock
+          const batchRes = await db.execute({ sql: 'SELECT ingredient_id FROM ingredient_batches WHERE id = ?', args: [ib.batch_id] });
+          const ingId = Number(batchRes.rows[0]?.ingredient_id);
+          if (ingId) {
+            ingredientReturns[ingId] = (ingredientReturns[ingId] || 0) + Number(ib.qty);
+          }
         }
         
-        const recipeItemsRes = await db.execute({
-          sql: 'SELECT r.ingredient_id, r.qty, r.adjustment_factor FROM recipes r WHERE r.product_variant_id = ?',
-          args: [item.product_variant_id]
-        });
-        const recipeItems = recipeItemsRes.rows;
-        for (const rItem of recipeItems) {
-          const totalAddition = Number(rItem.qty) * Number(item.qty) * Number(rItem.adjustment_factor);
+        for (const [ingId, qty] of Object.entries(ingredientReturns)) {
           await db.execute({
             sql: 'UPDATE ingredients SET stock = stock + ? WHERE id = ?',
-            args: [totalAddition, rItem.ingredient_id]
+            args: [qty, ingId]
           });
         }
       }
@@ -970,7 +1011,7 @@ async function startServer() {
 
       const itemsRes = await db.execute({
         sql: `
-          SELECT ti.transaction_id, pv.name as product_name, ti.qty, ti.unit_price, ti.hpp_snapshot
+          SELECT ti.transaction_id, pv.name as product_name, ti.qty, ti.unit_price, ti.hpp_snapshot, ti.notes, ti.modifiers
           FROM transaction_items ti
           JOIN product_variants pv ON ti.product_variant_id = pv.id
           WHERE ti.transaction_id IN (SELECT id FROM transactions WHERE DATE(created_at) = ? AND type = 'paid')

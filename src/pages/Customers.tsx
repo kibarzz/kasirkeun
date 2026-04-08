@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Users, Phone, Award, History, X, ChevronRight, ShoppingBag, Calendar, Search, Filter, ArrowUpDown, Heart, Save } from 'lucide-react';
+import { Users, Phone, Award, History, X, ChevronRight, ShoppingBag, Calendar, Search, Filter, ArrowUpDown, Heart, Save, Edit2, Trash2, AlertTriangle } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useLanguage } from '../i18n';
 
@@ -15,6 +15,10 @@ export default function Customers() {
   const [editingPreferences, setEditingPreferences] = useState(false);
   const [prefValue, setPrefValue] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState<any>(null);
+  const [deletingCustomerId, setDeletingCustomerId] = useState<number | null>(null);
   const [newCustomer, setNewCustomer] = useState({ name: '', phone: '', preferences: '', total_visits: 0, loyalty_visits: 0 });
   const { t, lang } = useLanguage();
 
@@ -90,6 +94,45 @@ export default function Customers() {
       }
     } catch (error) {
       console.error('Failed to add customer', error);
+    }
+  };
+
+  const handleEditCustomer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCustomer) return;
+    try {
+      const res = await fetch(`/api/customers/${editingCustomer.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editingCustomer)
+      });
+      if (res.ok) {
+        setIsEditModalOpen(false);
+        setEditingCustomer(null);
+        fetchCustomers();
+      } else {
+        alert(t.failedToUpdateCustomer);
+      }
+    } catch (error) {
+      console.error('Failed to update customer', error);
+    }
+  };
+
+  const handleDeleteCustomer = async () => {
+    if (!deletingCustomerId) return;
+    try {
+      const res = await fetch(`/api/customers/${deletingCustomerId}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        setIsDeleteModalOpen(false);
+        setDeletingCustomerId(null);
+        fetchCustomers();
+      } else {
+        alert(t.failedToDeleteCustomer);
+      }
+    } catch (error) {
+      console.error('Failed to delete customer', error);
     }
   };
 
@@ -245,13 +288,35 @@ export default function Customers() {
                       </span>
                     </td>
                     <td className="py-4 px-4 text-right">
-                      <button
-                        onClick={() => openCustomerDetails(customer)}
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 text-slate-700 dark:text-white/70 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-xl font-medium transition-colors"
-                      >
-                        <History className="w-4 h-4" />
-                        {t.viewHistory}
-                      </button>
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => openCustomerDetails(customer)}
+                          className="p-2 bg-slate-100 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 text-slate-700 dark:text-white/70 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-xl transition-colors"
+                          title={t.viewHistory}
+                        >
+                          <History className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditingCustomer(customer);
+                            setIsEditModalOpen(true);
+                          }}
+                          className="p-2 bg-slate-100 dark:bg-slate-800 hover:bg-amber-50 dark:hover:bg-amber-500/10 text-slate-700 dark:text-white/70 hover:text-amber-600 dark:hover:text-amber-400 rounded-xl transition-colors"
+                          title={t.edit}
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            setDeletingCustomerId(customer.id);
+                            setIsDeleteModalOpen(true);
+                          }}
+                          className="p-2 bg-slate-100 dark:bg-slate-800 hover:bg-rose-50 dark:hover:bg-rose-500/10 text-slate-700 dark:text-white/70 hover:text-rose-600 dark:hover:text-rose-400 rounded-xl transition-colors"
+                          title={t.deleteCustomer}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -475,6 +540,132 @@ export default function Customers() {
                   </button>
                 </div>
               </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Edit Customer Modal */}
+      <AnimatePresence>
+        {isEditModalOpen && editingCustomer && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white dark:bg-slate-900 border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+            >
+              <div className="p-6 border-b border-black/10 dark:border-white/10 flex justify-between items-center">
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white">{t.editCustomer}</h2>
+                <button 
+                  onClick={() => setIsEditModalOpen(false)} 
+                  className="text-slate-400 dark:text-white/40 hover:text-slate-900 dark:text-white transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <form onSubmit={handleEditCustomer} className="p-6 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t.name}</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingCustomer.name}
+                    onChange={(e) => setEditingCustomer({ ...editingCustomer, name: e.target.value })}
+                    className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-3 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t.phone}</label>
+                  <input
+                    type="text"
+                    value={editingCustomer.phone || ''}
+                    onChange={(e) => setEditingCustomer({ ...editingCustomer, phone: e.target.value })}
+                    className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-3 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t.preferences}</label>
+                  <textarea
+                    value={editingCustomer.preferences || ''}
+                    onChange={(e) => setEditingCustomer({ ...editingCustomer, preferences: e.target.value })}
+                    className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-3 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none h-24 resize-none"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t.totalVisitsLabel}</label>
+                    <input
+                      type="number"
+                      value={editingCustomer.total_visits}
+                      onChange={(e) => setEditingCustomer({ ...editingCustomer, total_visits: parseInt(e.target.value) || 0 })}
+                      className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-3 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t.loyaltyVisitsLabel}</label>
+                    <input
+                      type="number"
+                      value={editingCustomer.loyalty_visits}
+                      onChange={(e) => setEditingCustomer({ ...editingCustomer, loyalty_visits: parseInt(e.target.value) || 0 })}
+                      className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-3 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setIsEditModalOpen(false)}
+                    className="flex-1 px-4 py-3 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-white rounded-xl font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                  >
+                    {t.cancel}
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 px-4 py-3 bg-indigo-500 text-white rounded-xl font-bold hover:bg-indigo-600 transition-colors shadow-lg shadow-indigo-500/20"
+                  >
+                    {t.save}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {isDeleteModalOpen && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white dark:bg-slate-900 border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+            >
+              <div className="p-6 text-center">
+                <div className="w-16 h-16 bg-rose-100 dark:bg-rose-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <AlertTriangle className="w-8 h-8 text-rose-500" />
+                </div>
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">{t.deleteCustomer}</h2>
+                <p className="text-slate-500 dark:text-white/60 mb-6">
+                  {t.confirmDeleteCustomer}
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setIsDeleteModalOpen(false)}
+                    className="flex-1 px-4 py-3 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-white rounded-xl font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                  >
+                    {t.cancel}
+                  </button>
+                  <button
+                    onClick={handleDeleteCustomer}
+                    className="flex-1 px-4 py-3 bg-rose-500 text-white rounded-xl font-bold hover:bg-rose-600 transition-colors shadow-lg shadow-rose-500/20"
+                  >
+                    {t.deleteCustomer}
+                  </button>
+                </div>
+              </div>
             </motion.div>
           </div>
         )}

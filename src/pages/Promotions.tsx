@@ -10,6 +10,7 @@ export default function Promotions() {
   const [products, setProducts] = useState<any[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingPromo, setEditingPromo] = useState<any>(null);
+  const [deletingPromoId, setDeletingPromoId] = useState<number | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
   const [filterType, setFilterType] = useState('all');
 
@@ -126,10 +127,10 @@ export default function Promotions() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm(t.confirmDeletePromotion)) return;
     try {
       const res = await fetch(`/api/promotions/${id}`, { method: 'DELETE' });
       if (res.ok) fetchPromotions();
+      setDeletingPromoId(null);
     } catch (error) {
       console.error('Failed to delete promotion', error);
     }
@@ -289,7 +290,7 @@ export default function Promotions() {
                 <button onClick={() => openEditModal(promo)} className="p-2 text-slate-400 hover:text-indigo-500 transition-colors">
                   <Edit2 className="w-4 h-4" />
                 </button>
-                <button onClick={() => handleDelete(promo.id)} className="p-2 text-slate-400 hover:text-rose-500 transition-colors">
+                <button onClick={() => setDeletingPromoId(promo.id)} className="p-2 text-slate-400 hover:text-rose-500 transition-colors">
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
@@ -673,6 +674,38 @@ export default function Promotions() {
                   </button>
                 )}
               </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+      {/* Delete Confirmation Modal */}
+      {deletingPromoId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white dark:bg-slate-900 border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl w-full max-w-md p-6"
+          >
+            <div className="flex items-center gap-3 text-rose-500 mb-4">
+              <Trash2 className="w-6 h-6" />
+              <h3 className="text-xl font-bold">{t.confirmDeletePromotion}</h3>
+            </div>
+            <p className="text-slate-600 dark:text-white/70 mb-6">
+              {t.deletePromotionWarning || "Are you sure you want to delete this promotion? This action cannot be undone."}
+            </p>
+            <div className="flex gap-3">
+              <button 
+                onClick={() => setDeletingPromoId(null)}
+                className="flex-1 px-4 py-2 rounded-xl font-medium text-slate-500 dark:text-white/60 hover:text-slate-900 dark:text-white hover:bg-black/5 dark:bg-white/5 transition-colors"
+              >
+                {t.cancel}
+              </button>
+              <button 
+                onClick={() => handleDelete(deletingPromoId)}
+                className="flex-1 px-4 py-2 rounded-xl font-medium bg-rose-500 hover:bg-rose-400 text-white transition-colors shadow-lg shadow-rose-500/20"
+              >
+                {t.delete}
+              </button>
             </div>
           </motion.div>
         </div>

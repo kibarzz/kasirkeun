@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ShoppingCart, User, CreditCard, Banknote, Search, Plus, Minus, Trash2, Coffee, X, Gift, LogOut } from 'lucide-react';
+import { ShoppingCart, User, CreditCard, Banknote, Search, Plus, Minus, Trash2, Coffee, X, Gift, LogOut, MessageSquare, Settings2 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useLanguage } from '../i18n';
 
@@ -26,7 +26,15 @@ export default function POS() {
   // Shift Closing State
   const [showClosingModal, setShowClosingModal] = useState(false);
   const [shiftSummary, setShiftSummary] = useState<any>(null);
+  const [customizingItem, setCustomizingItem] = useState<any>(null);
   const { t } = useLanguage();
+
+  const MODIFIER_OPTIONS = {
+    temp: ['Hot', 'Ice'],
+    size: ['Regular', 'Large'],
+    sugar: ['Normal', 'Less', 'No'],
+    iceLevel: ['Normal', 'Less', 'No']
+  };
 
   useEffect(() => {
     fetch('/api/products')
@@ -139,21 +147,48 @@ export default function POS() {
   const addToCart = (product: any, variant: any) => {
     const finalPrice = channel === 'Online' ? variant.online_price : variant.dine_in_price;
 
-    const existingItem = cart.find(item => item.variant.id === variant.id);
-    if (existingItem) {
-      setCart(cart.map(item => 
-        item.variant.id === variant.id 
-          ? { ...item, qty: item.qty + 1 } 
-          : item
-      ));
-    } else {
-      setCart([...cart, { product, variant, qty: 1, price: finalPrice }]);
-    }
+    setCustomizingItem({
+      cartId: Date.now(),
+      product,
+      variant,
+      qty: 1,
+      price: finalPrice,
+      notes: '',
+      modifiers: {
+        temp: 'Ice',
+        size: 'Regular',
+        sugar: 'Normal',
+        iceLevel: 'Normal'
+      }
+    });
   };
 
-  const updateQty = (variantId: number, delta: number) => {
+  const confirmAddToCart = (item: any) => {
+    const existingIndex = cart.findIndex(i => 
+      i.variant.id === item.variant.id && 
+      i.notes === item.notes && 
+      JSON.stringify(i.modifiers) === JSON.stringify(item.modifiers)
+    );
+
+    if (existingIndex > -1) {
+      const newCart = [...cart];
+      newCart[existingIndex].qty += item.qty;
+      setCart(newCart);
+    } else {
+      setCart([...cart, item]);
+    }
+    setCustomizingItem(null);
+  };
+
+  const updateCartItem = (item: any) => {
+    const newCart = cart.map(i => i.cartId === item.cartId ? item : i);
+    setCart(newCart);
+    setCustomizingItem(null);
+  };
+
+  const updateQty = (cartId: number, delta: number) => {
     setCart(prevCart => prevCart.map(item => {
-      if (item.variant.id === variantId) {
+      if (item.cartId === cartId) {
         return { ...item, qty: item.qty + delta };
       }
       return item;
@@ -320,7 +355,9 @@ export default function POS() {
         product_variant_id: item.variant.id,
         qty: item.qty,
         unit_price: item.price,
-        hpp_snapshot: 0 // Server will calculate this
+        hpp_snapshot: 0, // Server will calculate this
+        notes: item.notes,
+        modifiers: item.modifiers
       }))
     };
 
@@ -427,16 +464,46 @@ export default function POS() {
                 ? Math.min(...productVariants.map(v => channel === 'Online' ? v.online_price : v.dine_in_price))
                 : 0;
               
+              const hasPromo = promotions.some(promo => promo.product_ids.includes(product.id));
+              
               return (
                 <motion.div 
                   key={product.id}
                   layout
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-2xl p-4 hover:bg-black/10 dark:bg-white/10 transition-all cursor-pointer group flex flex-col"
+                  className={clsx(
+                    "rounded-2xl p-4 transition-all cursor-pointer group flex flex-col relative overflow-hidden border",
+                    hasPromo 
+                      ? "bg-amber-500/5 border-amber-500/30 hover:bg-amber-500/10" 
+                      : "bg-black/5 dark:bg-white/5 border-black/10 dark:border-white/10 hover:bg-black/10 dark:bg-white/10"
+                  )}
                 >
-                  <div className="w-full aspect-square rounded-xl bg-gradient-to-br from-white/5 to-white/10 mb-4 flex items-center justify-center border border-black/5 dark:border-white/5 group-hover:border-amber-500/30 transition-colors">
-                    <Coffee className="w-12 h-12 text-slate-300 dark:text-white/20 group-hover:text-amber-400/50 transition-colors" />
+                  {hasPromo && (
+                    <div className="absolute top-0 right-0 bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-bl-lg flex items-center gap-1 shadow-lg z-10">
+                      <Gift className="w-3 h-3" />
+                      PROMO
+                    </div>
+                  )}
+                  <div className={clsx(
+                    "w-full aspect-square rounded-xl mb-4 flex items-center justify-center border transition-colors overflow-hidden",
+                    hasPromo
+                      ? "bg-amber-500/10 border-amber-500/20 group-hover:border-amber-500/50"
+                      : "bg-gradient-to-br from-white/5 to-white/10 border-black/5 dark:border-white/5 group-hover:border-amber-500/30"
+                  )}>
+                    {product.image_url ? (
+                      <img 
+                        src={product.image_url} 
+                        alt={product.name} 
+                        className="w-full h-full object-cover"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <Coffee className={clsx(
+                        "w-12 h-12 transition-colors",
+                        hasPromo ? "text-amber-500/50 group-hover:text-amber-400" : "text-slate-300 dark:text-white/20 group-hover:text-amber-400/50"
+                      )} />
+                    )}
                   </div>
                   <h3 className="text-slate-900 dark:text-white font-semibold mb-1 truncate">{product.name}</h3>
                   <p className="text-amber-400 font-mono text-sm mb-3">{formatCurrency(displayPrice)}</p>
@@ -472,7 +539,7 @@ export default function POS() {
       <div className="w-full lg:w-[380px] bg-black/5 dark:bg-white/5 backdrop-blur-xl border border-black/10 dark:border-white/10 rounded-3xl shadow-2xl flex flex-col overflow-hidden relative min-h-[400px]">
         <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 rounded-full blur-[80px] pointer-events-none" />
         
-        <div className="p-6 border-b border-black/10 dark:border-white/10 relative z-10">
+        <div className="p-6 border-b border-black/10 dark:border-white/10 relative z-30">
           <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
             <ShoppingCart className="w-5 h-5" />
             {t.currentOrder}
@@ -575,27 +642,44 @@ export default function POS() {
               <div className="space-y-4">
                 {cart.map((item, idx) => (
                   <motion.div 
-                    key={`${item.variant.id}-${idx}`}
+                    key={item.cartId}
                     layout
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -20 }}
-                    className="flex items-center gap-3 bg-black/5 dark:bg-white/5 p-3 rounded-2xl border border-black/5 dark:border-white/5"
+                    className="flex flex-col gap-2 bg-black/5 dark:bg-white/5 p-3 rounded-2xl border border-black/5 dark:border-white/5"
                   >
-                    <div className="flex-1 min-w-0">
-                      <h4 className="text-slate-900 dark:text-white font-medium text-sm truncate">{item.product.name}</h4>
-                      <p className="text-slate-500 dark:text-white/50 text-xs">{item.variant.name}</p>
-                      <p className="text-amber-400 font-mono text-xs mt-1">{formatCurrency(item.price)}</p>
-                    </div>
-                    
-                    <div className="flex items-center gap-2 bg-black/10 dark:bg-white/10 rounded-xl p-1">
-                      <button onClick={() => updateQty(item.variant.id, -1)} className="p-1 hover:bg-black/20 dark:bg-white/20 rounded-lg text-slate-900 dark:text-white transition-colors">
-                        {item.qty === 1 ? <Trash2 className="w-3 h-3 text-rose-400" /> : <Minus className="w-3 h-3" />}
-                      </button>
-                      <span className="text-slate-900 dark:text-white text-sm font-medium w-4 text-center">{item.qty}</span>
-                      <button onClick={() => updateQty(item.variant.id, 1)} className="p-1 hover:bg-black/20 dark:bg-white/20 rounded-lg text-slate-900 dark:text-white transition-colors">
-                        <Plus className="w-3 h-3" />
-                      </button>
+                    <div className="flex items-center gap-3">
+                      <div 
+                        className="flex-1 min-w-0 cursor-pointer hover:opacity-80 transition-opacity"
+                        onClick={() => setCustomizingItem(item)}
+                      >
+                        <h4 className="text-slate-900 dark:text-white font-medium text-sm truncate">{item.product.name}</h4>
+                        <p className="text-slate-500 dark:text-white/50 text-xs">{item.variant.name}</p>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {Object.entries(item.modifiers).map(([key, value]) => (
+                            <span key={key} className="text-[10px] bg-black/10 dark:bg-white/10 px-1.5 py-0.5 rounded text-slate-500 dark:text-white/40">
+                              {t[key]}: {t[String(value).toLowerCase()]}
+                            </span>
+                          ))}
+                        </div>
+                        {item.notes && (
+                          <p className="text-[10px] text-amber-500/80 italic mt-1 flex items-center gap-1">
+                            <MessageSquare className="w-2.5 h-2.5" /> {item.notes}
+                          </p>
+                        )}
+                        <p className="text-amber-400 font-mono text-xs mt-1">{formatCurrency(item.price)}</p>
+                      </div>
+                      
+                      <div className="flex items-center gap-2 bg-black/10 dark:bg-white/10 rounded-xl p-1">
+                        <button onClick={() => updateQty(item.cartId, -1)} className="p-1 hover:bg-black/20 dark:bg-white/20 rounded-lg text-slate-900 dark:text-white transition-colors">
+                          {item.qty === 1 ? <Trash2 className="w-3 h-3 text-rose-400" /> : <Minus className="w-3 h-3" />}
+                        </button>
+                        <span className="text-slate-900 dark:text-white text-sm font-medium w-4 text-center">{item.qty}</span>
+                        <button onClick={() => updateQty(item.cartId, 1)} className="p-1 hover:bg-black/20 dark:bg-white/20 rounded-lg text-slate-900 dark:text-white transition-colors">
+                          <Plus className="w-3 h-3" />
+                        </button>
+                      </div>
                     </div>
                   </motion.div>
                 ))}
@@ -693,6 +777,117 @@ export default function POS() {
           </button>
         </div>
       </div>
+
+      {/* Customization Modal */}
+      <AnimatePresence>
+        {customizingItem && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white dark:bg-slate-900 border border-black/10 dark:border-white/10 rounded-3xl p-6 w-full max-w-lg shadow-2xl"
+            >
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h2 className="text-xl font-bold text-slate-900 dark:text-white">{t.customize}</h2>
+                  <p className="text-slate-500 dark:text-white/60 text-sm">{customizingItem.product.name} - {customizingItem.variant.name}</p>
+                </div>
+                <button onClick={() => setCustomizingItem(null)} className="text-slate-400 dark:text-white/40 hover:text-slate-900 dark:text-white">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-6 mb-8 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+                {Object.entries(MODIFIER_OPTIONS).map(([category, options]) => {
+                  // Hide ice level if temperature is Hot
+                  if (category === 'iceLevel' && customizingItem.modifiers.temp === 'Hot') {
+                    return null;
+                  }
+
+                  return (
+                    <div key={category}>
+                      <label className="block text-sm font-medium text-slate-500 dark:text-white/60 mb-3 capitalize flex items-center gap-2">
+                        <Settings2 className="w-4 h-4" /> {t[category]}
+                      </label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {options.map(option => (
+                          <button
+                            key={option}
+                            onClick={() => {
+                              const newModifiers = { ...customizingItem.modifiers, [category]: option };
+                              // If switching to Hot, remove iceLevel from modifiers if you want, 
+                              // but keeping it in state is fine as long as it's hidden and not used.
+                              // The user said "remove the ice level", so let's ensure it's handled.
+                              if (category === 'temp' && option === 'Hot') {
+                                delete newModifiers.iceLevel;
+                              } else if (category === 'temp' && option === 'Ice') {
+                                newModifiers.iceLevel = 'Normal';
+                              }
+                              
+                              setCustomizingItem({
+                                ...customizingItem,
+                                modifiers: newModifiers
+                              });
+                            }}
+                            className={clsx(
+                              'py-2 px-3 rounded-xl text-xs font-medium transition-all border',
+                              customizingItem.modifiers[category] === option
+                                ? 'bg-amber-500 text-white border-amber-600 shadow-md'
+                                : 'bg-black/5 dark:bg-white/5 text-slate-500 dark:text-white/60 border-black/10 dark:border-white/10 hover:bg-black/10 dark:bg-white/10'
+                            )}
+                          >
+                            {t[option.toLowerCase()] || option}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-500 dark:text-white/60 mb-3 flex items-center gap-2">
+                    <MessageSquare className="w-4 h-4" /> {t.notes}
+                  </label>
+                  <textarea
+                    value={customizingItem.notes}
+                    onChange={(e) => setCustomizingItem({ ...customizingItem, notes: e.target.value })}
+                    placeholder={t.addNote}
+                    className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-white/40 rounded-xl p-4 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50 min-h-[100px] transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setCustomizingItem(null)}
+                  className="flex-1 bg-black/10 dark:bg-white/10 hover:bg-black/20 dark:bg-white/20 text-slate-900 dark:text-white font-medium py-3 rounded-xl transition-colors"
+                >
+                  {t.cancel}
+                </button>
+                <button
+                  onClick={() => {
+                    const isNew = !cart.some(i => i.cartId === customizingItem.cartId);
+                    if (isNew) {
+                      confirmAddToCart(customizingItem);
+                    } else {
+                      updateCartItem(customizingItem);
+                    }
+                  }}
+                  className="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-medium py-3 rounded-xl transition-colors shadow-lg shadow-amber-500/25"
+                >
+                  {t.saveCustomization}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Shift Closing Modal */}
       <AnimatePresence>

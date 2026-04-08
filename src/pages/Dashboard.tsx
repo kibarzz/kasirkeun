@@ -17,6 +17,7 @@ const defaultData = [
 
 export default function Dashboard() {
   const [stats, setStats] = useState<any>(null);
+  const [voidingTx, setVoidingTx] = useState<any>(null);
   const navigate = useNavigate();
   const { t, lang } = useLanguage();
 
@@ -210,12 +211,7 @@ export default function Dashboard() {
                   <td className="py-4 text-right">
                     {tx.status === 'completed' && (
                       <button 
-                        onClick={async () => {
-                          if (confirm(t.confirmVoid)) {
-                            await fetch(`/api/transactions/${tx.id}/void`, { method: 'POST' });
-                            fetch('/api/dashboard').then(res => res.json()).then(data => setStats(data));
-                          }
-                        }}
+                        onClick={() => setVoidingTx(tx)}
                         className="text-rose-400 hover:text-rose-300 text-xs font-medium bg-rose-500/10 hover:bg-rose-500/20 px-3 py-1.5 rounded-lg transition-colors"
                       >
                         {t.void}
@@ -233,6 +229,48 @@ export default function Dashboard() {
           </table>
         </div>
       </div>
+
+      {/* Void Confirmation Modal */}
+      <AnimatePresence>
+        {voidingTx && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white dark:bg-slate-900 border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl w-full max-w-md p-6"
+            >
+              <div className="flex items-center gap-3 text-rose-500 mb-4">
+                <AlertCircle className="w-6 h-6" />
+                <h3 className="text-xl font-bold">{t.confirmVoid}</h3>
+              </div>
+              <p className="text-slate-600 dark:text-white/70 mb-6">
+                {t.voidWarning || "Are you sure you want to void this transaction? This action will return stock and cannot be undone."}
+                <br />
+                <span className="font-mono text-amber-500 mt-2 block">Transaction #{voidingTx.id}</span>
+              </p>
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => setVoidingTx(null)}
+                  className="flex-1 px-4 py-2 rounded-xl font-medium text-slate-500 dark:text-white/60 hover:text-slate-900 dark:text-white hover:bg-black/5 dark:bg-white/5 transition-colors"
+                >
+                  {t.cancel}
+                </button>
+                <button 
+                  onClick={async () => {
+                    await fetch(`/api/transactions/${voidingTx.id}/void`, { method: 'POST' });
+                    fetch('/api/dashboard').then(res => res.json()).then(data => setStats(data));
+                    setVoidingTx(null);
+                  }}
+                  className="flex-1 px-4 py-2 rounded-xl font-medium bg-rose-500 hover:bg-rose-400 text-white transition-colors shadow-lg shadow-rose-500/20"
+                >
+                  {t.void}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

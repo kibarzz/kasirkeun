@@ -248,7 +248,9 @@ export const initDB = async () => {
       'ALTER TABLE product_variants ADD COLUMN dine_in_price REAL DEFAULT 0',
       'ALTER TABLE product_variants ADD COLUMN online_price REAL DEFAULT 0',
       'ALTER TABLE product_variants ADD COLUMN dine_in_discount REAL DEFAULT 0',
-      'ALTER TABLE product_variants ADD COLUMN online_discount REAL DEFAULT 0'
+      'ALTER TABLE product_variants ADD COLUMN online_discount REAL DEFAULT 0',
+      'ALTER TABLE transaction_items ADD COLUMN notes TEXT',
+      'ALTER TABLE transaction_items ADD COLUMN modifiers TEXT'
     ];
 
 
