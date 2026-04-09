@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ShoppingCart, User, CreditCard, Banknote, Search, Plus, Minus, Trash2, Coffee, X, Gift, LogOut, MessageSquare, Settings2 } from 'lucide-react';
+import { ShoppingCart, User, CreditCard, Banknote, Search, Plus, Minus, Trash2, Coffee, X, Gift, LogOut, MessageSquare, Settings2, Download, Image as ImageIcon } from 'lucide-react';
+import { toPng } from 'html-to-image';
 import { clsx } from 'clsx';
 import { useLanguage } from '../i18n';
 
@@ -15,19 +16,90 @@ export default function POS() {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [isTaxApplied, setIsTaxApplied] = useState(true);
 
+  // Shift Management State
+  const [currentShift, setCurrentShift] = useState<any>(null);
+  const [showShiftModal, setShowShiftModal] = useState(false);
+  const [startingCash, setStartingCash] = useState('');
+  const [endingCash, setEndingCash] = useState('');
+  const [shiftNotes, setShiftNotes] = useState('');
+  const [isStartingShift, setIsStartingShift] = useState(false);
+
   // Customer Loyalty State
   const [customer, setCustomer] = useState<any>(null);
   const [customerSearch, setCustomerSearch] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerResults, setCustomerResults] = useState<any[]>([]);
   const [isRedeeming, setIsRedeeming] = useState(false);
+  const [loyaltySettings, setLoyaltySettings] = useState({ points_per_amount: 10000, redeem_value_per_point: 100 });
   const [paymentProof, setPaymentProof] = useState<File | null>(null);
+
+  // Transaction Success State
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [lastTransaction, setLastTransaction] = useState<any>(null);
 
   // Shift Closing State
   const [showClosingModal, setShowClosingModal] = useState(false);
   const [shiftSummary, setShiftSummary] = useState<any>(null);
   const [customizingItem, setCustomizingItem] = useState<any>(null);
+  const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
   const { t } = useLanguage();
+  const receiptRef = useRef<HTMLDivElement>(null);
+
+  const downloadReceiptImage = async () => {
+    if (receiptRef.current === null) return;
+    try {
+      const dataUrl = await toPng(receiptRef.current, {
+        pixelRatio: 4, // Increased resolution for professional look
+        cacheBust: true,
+        backgroundColor: '#ffffff',
+        style: {
+          borderRadius: '0'
+        }
+      });
+      const link = document.createElement('a');
+      link.download = `receipt-${lastTransaction?.id || 'order'}.png`;
+      link.href = dataUrl;
+      link.click();
+    } catch (err) {
+      console.error('Failed to generate receipt image', err);
+    }
+  };
+
+  const shareReceipt = async () => {
+    if (receiptRef.current === null || !lastTransaction) return;
+    try {
+      const dataUrl = await toPng(receiptRef.current, {
+        pixelRatio: 4,
+        cacheBust: true,
+        backgroundColor: '#ffffff',
+      });
+      
+      const blob = await (await fetch(dataUrl)).blob();
+      const file = new File([blob], `receipt-${lastTransaction.id}.png`, { type: 'image/png' });
+      
+      const shareData = {
+        files: [file],
+        title: 'Kedai M46 Receipt',
+        text: `Digital Receipt for Order #${lastTransaction.id} at Kedai M46. Thank you!`,
+      };
+
+      if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+        await navigator.share(shareData);
+      } else {
+        // Fallback to clipboard for desktop
+        try {
+          const item = new ClipboardItem({ "image/png": blob });
+          await navigator.clipboard.write([item]);
+          alert("Receipt image copied to clipboard! You can now paste (Ctrl+V) it directly into WhatsApp.");
+        } catch (clipboardErr) {
+          downloadReceiptImage();
+        }
+      }
+    } catch (err) {
+      console.error('Error sharing receipt', err);
+      downloadReceiptImage();
+    }
+  };
 
   const MODIFIER_OPTIONS = {
     temp: ['Hot', 'Ice'],
@@ -49,6 +121,33 @@ export default function POS() {
       .then(data => {
         setPromotions(data.filter((p: any) => p.is_active === 1));
       });
+
+    // Fetch Loyalty Settings
+    fetch('/api/settings')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.points_per_amount) {
+          setLoyaltySettings({
+            points_per_amount: Number(data.points_per_amount),
+            redeem_value_per_point: Number(data.redeem_value_per_point)
+          });
+        }
+      });
+
+    // Check current shift
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    if (user.id) {
+      fetch(`/api/shifts/current?userId=${user.id}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data) {
+            setCurrentShift(data);
+          } else {
+            setShowShiftModal(true);
+            setIsStartingShift(true);
+          }
+        });
+    }
   }, []);
 
   useEffect(() => {
@@ -338,6 +437,9 @@ export default function POS() {
       }
     }
 
+    const pointsEarned = Math.floor(total / loyaltySettings.points_per_amount);
+    const pointsRedeemed = isRedeeming ? Math.min(customer?.points || 0, Math.floor(discount / loyaltySettings.redeem_value_per_point)) : 0;
+
     const payload = {
       customer_id: finalCustomerId,
       user_id: user.id || 1, // Use logged in user
@@ -351,6 +453,9 @@ export default function POS() {
       redeem_loyalty: isRedeeming,
       payment_proof_url: paymentProofUrl,
       applied_promotion_ids: appliedPromotionIds,
+      shift_id: currentShift?.id,
+      points_earned: pointsEarned,
+      points_redeemed: pointsRedeemed,
       items: cart.map(item => ({
         product_variant_id: item.variant.id,
         qty: item.qty,
@@ -369,7 +474,23 @@ export default function POS() {
       });
       
       if (res.ok) {
-        alert(t.transactionSuccessful);
+        const data = await res.json();
+        setLastTransaction({ 
+          ...payload, 
+          id: data.id, 
+          created_at: new Date().toISOString(),
+          customerName: customer?.name || customerSearch || (customerPhone ? `Customer ${customerPhone}` : 'Guest'),
+          customerPhone: customer?.phone || customerPhone,
+          fullItems: cart.map(item => ({
+            name: item.product.name,
+            variant: item.variant.name,
+            qty: item.qty,
+            price: item.price,
+            modifiers: item.modifiers,
+            notes: item.notes
+          }))
+        });
+        setShowSuccessModal(true);
         setCart([]);
         setCustomer(null);
         setCustomerSearch('');
@@ -403,7 +524,10 @@ export default function POS() {
           
           <div className="flex flex-wrap gap-4 w-full md:w-auto">
             <button
-              onClick={fetchShiftSummary}
+              onClick={() => {
+                setIsStartingShift(false);
+                setShowShiftModal(true);
+              }}
               className="flex items-center gap-2 bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 border border-rose-500/30 px-4 py-2 rounded-xl text-sm font-medium transition-colors"
             >
               <LogOut className="w-4 h-4" />
@@ -491,12 +615,13 @@ export default function POS() {
                       ? "bg-amber-500/10 border-amber-500/20 group-hover:border-amber-500/50"
                       : "bg-gradient-to-br from-white/5 to-white/10 border-black/5 dark:border-white/5 group-hover:border-amber-500/30"
                   )}>
-                    {product.image_url ? (
+                    {product.image_url && !failedImages[product.id] ? (
                       <img 
                         src={product.image_url} 
                         alt={product.name} 
                         className="w-full h-full object-cover"
                         referrerPolicy="no-referrer"
+                        onError={() => setFailedImages(prev => ({ ...prev, [product.id]: true }))}
                       />
                     ) : (
                       <Coffee className={clsx(
@@ -551,7 +676,7 @@ export default function POS() {
                 <div>
                   <p className="text-slate-900 dark:text-white font-medium text-sm">{customer.name}</p>
                   {customer.phone && <p className="text-slate-500 dark:text-white/40 text-xs">{customer.phone}</p>}
-                  <p className="text-amber-400 text-xs">{customer.loyalty_visits} {t.visits}</p>
+                  <p className="text-amber-400 text-xs">{customer.points || 0} Points • {customer.loyalty_visits} {t.visits}</p>
                 </div>
                 <button onClick={() => { setCustomer(null); setIsRedeeming(false); }} className="text-slate-400 dark:text-white/40 hover:text-slate-900 dark:text-white">
                   <X className="w-4 h-4" />
@@ -946,6 +1071,314 @@ export default function POS() {
                   className="flex-1 bg-rose-500 hover:bg-rose-600 text-white font-medium py-3 rounded-xl transition-colors shadow-lg shadow-rose-500/25"
                 >
                   {t.confirmClose}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      {/* Shift Modal */}
+      <AnimatePresence>
+        {showShiftModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="bg-white dark:bg-slate-900 border border-black/10 dark:border-white/10 rounded-3xl p-8 w-full max-w-md shadow-2xl"
+            >
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
+                {isStartingShift ? 'Start Shift' : 'Close Shift'}
+              </h2>
+              <p className="text-slate-500 dark:text-white/60 mb-6">
+                {isStartingShift 
+                  ? 'Please enter the starting cash in the drawer to begin your shift.' 
+                  : 'Please enter the actual cash in the drawer to close your shift.'}
+              </p>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-1">
+                    {isStartingShift ? 'Starting Cash' : 'Ending Cash (Actual)'}
+                  </label>
+                  <div className="relative">
+                    <Banknote className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="number"
+                      value={isStartingShift ? startingCash : endingCash}
+                      onChange={(e) => isStartingShift ? setStartingCash(e.target.value) : setEndingCash(e.target.value)}
+                      className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl pl-10 pr-4 py-3 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500/50 outline-none"
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-1">Notes (Optional)</label>
+                  <textarea
+                    value={shiftNotes}
+                    onChange={(e) => setShiftNotes(e.target.value)}
+                    className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500/50 outline-none h-24 resize-none"
+                    placeholder="Any observations or issues..."
+                  />
+                </div>
+
+                <button
+                  onClick={async () => {
+                    const user = JSON.parse(localStorage.getItem('user') || '{}');
+                    if (isStartingShift) {
+                      const res = await fetch('/api/shifts/start', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          user_id: user.id,
+                          starting_cash: Number(startingCash),
+                          notes: shiftNotes
+                        })
+                      });
+                      if (res.ok) {
+                        const data = await res.json();
+                        setCurrentShift({ id: data.id, starting_cash: Number(startingCash) });
+                        setShowShiftModal(false);
+                        setStartingCash('');
+                        setShiftNotes('');
+                      }
+                    } else {
+                      const res = await fetch('/api/shifts/end', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          id: currentShift.id,
+                          ending_cash_actual: Number(endingCash),
+                          notes: shiftNotes
+                        })
+                      });
+                      if (res.ok) {
+                        const data = await res.json();
+                        alert(`Shift closed. Expected cash: ${formatCurrency(data.expectedCash)}. Actual: ${formatCurrency(Number(endingCash))}`);
+                        setCurrentShift(null);
+                        setShowShiftModal(false);
+                        setEndingCash('');
+                        setShiftNotes('');
+                        // Force re-open start shift modal
+                        setShowShiftModal(true);
+                        setIsStartingShift(true);
+                      }
+                    }
+                  }}
+                  className="w-full bg-amber-500 hover:bg-amber-400 text-white font-bold py-3 rounded-xl shadow-lg transition-all"
+                >
+                  {isStartingShift ? 'Start Shift' : 'Close Shift'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Transaction Success Modal */}
+      <AnimatePresence>
+        {showSuccessModal && lastTransaction && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="bg-white dark:bg-slate-900 border border-black/10 dark:border-white/10 rounded-3xl p-6 w-full max-w-lg shadow-2xl flex flex-col max-h-[90vh]"
+            >
+              <div className="flex-1 overflow-y-auto custom-scrollbar pr-2">
+                <div className="w-16 h-16 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Gift className="w-8 h-8 text-emerald-500" />
+                </div>
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-1 text-center">{t.transactionSuccessful}</h2>
+                <p className="text-slate-500 dark:text-white/60 mb-6 text-center text-sm">Order #{lastTransaction.id} has been processed.</p>
+
+                {/* Professional Receipt Preview */}
+                <div className="flex justify-center mb-6">
+                  <div 
+                    ref={receiptRef}
+                    className="bg-white text-slate-900 p-10 shadow-sm border border-slate-100 w-full max-w-[340px] font-mono text-[11px] leading-relaxed"
+                  >
+                    <div className="text-center mb-8">
+                      <div className="flex justify-center mb-2">
+                        <div className="w-12 h-12 border-2 border-slate-900 rounded-xl flex items-center justify-center">
+                          <Coffee className="w-7 h-7" />
+                        </div>
+                      </div>
+                      <h3 className="text-xl font-bold uppercase tracking-[0.2em] mb-1">Kedai M46</h3>
+                      <p className="text-[9px] text-slate-500 uppercase tracking-wider">Premium Coffee & Roastery</p>
+                      <div className="flex items-center justify-center gap-2 mt-2">
+                        <div className="h-[1px] w-8 bg-slate-200" />
+                        <p className="text-[8px] text-slate-400">EST. 2024</p>
+                        <div className="h-[1px] w-8 bg-slate-200" />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5 mb-6 text-[10px]">
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">ORDER ID</span>
+                        <span className="font-bold">#{lastTransaction.id}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">DATE</span>
+                        <span>{new Date(lastTransaction.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">TIME</span>
+                        <span>{new Date(lastTransaction.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">CUSTOMER</span>
+                        <span className="font-bold truncate ml-4">{lastTransaction.customerName}</span>
+                      </div>
+                    </div>
+
+                    <div className="border-t border-b border-dashed border-slate-300 py-4 mb-6">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="text-left text-[9px] text-slate-400 uppercase tracking-wider">
+                            <th className="pb-2 font-normal">Description</th>
+                            <th className="pb-2 text-right font-normal">Amount</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-dashed divide-slate-100">
+                          {lastTransaction.fullItems.map((item: any, idx: number) => (
+                            <tr key={idx} className="align-top">
+                              <td className="py-2 pr-4">
+                                <div className="font-bold uppercase text-slate-800">{item.name}</div>
+                                <div className="text-[9px] text-slate-500 mt-0.5">{item.variant} × {item.qty}</div>
+                                {Object.entries(item.modifiers).map(([key, val]) => (
+                                  <div key={key} className="text-[8px] text-slate-400 italic mt-0.5">
+                                    ↳ {t[key] || key}: {t[String(val).toLowerCase()] || val}
+                                  </div>
+                                ))}
+                                {item.notes && (
+                                  <div className="text-[8px] text-amber-600 italic mt-0.5">
+                                    Note: {item.notes}
+                                  </div>
+                                )}
+                              </td>
+                              <td className="text-right py-2 font-bold text-slate-800">
+                                {formatCurrency(item.price * item.qty)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <div className="space-y-2 mb-8">
+                      <div className="flex justify-between text-slate-500">
+                        <span>SUBTOTAL</span>
+                        <span>{formatCurrency(lastTransaction.total_amount + lastTransaction.discount_amount)}</span>
+                      </div>
+                      {lastTransaction.discount_amount > 0 && (
+                        <div className="flex justify-between text-rose-500">
+                          <span>DISCOUNT</span>
+                          <span>-{formatCurrency(lastTransaction.discount_amount)}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between text-slate-500">
+                        <span>TAX (PB1 10%)</span>
+                        <span>{formatCurrency(lastTransaction.tax_amount)}</span>
+                      </div>
+                      <div className="flex justify-between text-base font-bold pt-3 border-t-2 border-slate-900 mt-2">
+                        <span>TOTAL</span>
+                        <span>{formatCurrency(lastTransaction.final_amount)}</span>
+                      </div>
+                    </div>
+
+                    <div className="text-center space-y-4">
+                      <div className="flex justify-center gap-1">
+                        {[...Array(20)].map((_, i) => (
+                          <div key={i} className="w-1 h-1 bg-slate-200 rounded-full" />
+                        ))}
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold tracking-[0.3em] uppercase">Terima Kasih</p>
+                        <p className="text-[8px] text-slate-400 mt-1 uppercase tracking-widest">Visit us again soon</p>
+                      </div>
+                      <div className="flex justify-center pt-2">
+                        <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
+                           <div className="w-16 h-4 bg-slate-200 rounded flex items-center justify-center overflow-hidden">
+                              <div className="flex gap-0.5">
+                                {[...Array(10)].map((_, i) => (
+                                  <div key={i} className="w-[2px] h-3 bg-slate-400" />
+                                ))}
+                              </div>
+                           </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+                <button
+                  onClick={shareReceipt}
+                  className="flex items-center justify-center gap-2 bg-indigo-500 hover:bg-indigo-400 text-white py-3 rounded-xl font-bold transition-all text-sm shadow-lg shadow-indigo-500/20"
+                >
+                  <MessageSquare className="w-4 h-4" /> Share Receipt
+                </button>
+                <button
+                  onClick={downloadReceiptImage}
+                  className="flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-white py-3 rounded-xl font-bold transition-all text-sm shadow-lg shadow-slate-800/20"
+                >
+                  <Download className="w-4 h-4" /> Download PNG
+                </button>
+                <button
+                  onClick={() => {
+                    const itemsText = lastTransaction.fullItems.map((item: any) => {
+                      let modText = Object.entries(item.modifiers)
+                        .map(([key, value]) => `${t[key] || key}: ${t[String(value).toLowerCase()] || value}`)
+                        .join(', ');
+                      return `☕ *${item.name}* (${item.variant})\n` +
+                             `   ${item.qty} x ${formatCurrency(item.price)}` +
+                             `${modText ? `\n   _Options: ${modText}_` : ''}` +
+                             `${item.notes ? `\n   _Note: ${item.notes}_` : ''}`;
+                    }).join('\n\n');
+
+                    const text = `*KEDAI M46 - DIGITAL RECEIPT*\n` +
+                      `================================\n` +
+                      `🆔 *Order:* #${lastTransaction.id}\n` +
+                      `📅 *Date:* ${new Date(lastTransaction.created_at).toLocaleString('id-ID')}\n` +
+                      `👤 *Customer:* ${lastTransaction.customerName}\n` +
+                      `================================\n\n` +
+                      `${itemsText}\n\n` +
+                      `================================\n` +
+                      `Subtotal: ${formatCurrency(lastTransaction.total_amount + lastTransaction.discount_amount)}\n` +
+                      `Discount: -${formatCurrency(lastTransaction.discount_amount)}\n` +
+                      `Tax (PB1): ${formatCurrency(lastTransaction.tax_amount)}\n` +
+                      `--------------------------------\n` +
+                      `*TOTAL: ${formatCurrency(lastTransaction.final_amount)}*\n` +
+                      `================================\n\n` +
+                      `Terima kasih telah berkunjung ke *Kedai M46*! 🙏✨\n` +
+                      `_Semoga harimu menyenangkan!_`;
+                    
+                    let phone = lastTransaction.customerPhone?.replace(/\D/g, '') || '';
+                    if (phone.startsWith('0')) {
+                      phone = '62' + phone.substring(1);
+                    }
+                    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, '_blank');
+                  }}
+                  className="flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-white py-3 rounded-xl font-bold transition-all text-sm shadow-lg shadow-emerald-500/20"
+                >
+                  <MessageSquare className="w-4 h-4" /> WhatsApp Text
+                </button>
+                <button
+                  onClick={() => setShowSuccessModal(false)}
+                  className="bg-slate-200 dark:bg-white/10 hover:bg-slate-300 dark:hover:bg-white/20 text-slate-900 dark:text-white py-3 rounded-xl font-bold transition-all text-sm"
+                >
+                  Close
                 </button>
               </div>
             </motion.div>

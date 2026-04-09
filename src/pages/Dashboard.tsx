@@ -179,6 +179,7 @@ export default function Dashboard() {
               <tr className="text-slate-400 dark:text-white/40 text-sm border-b border-black/10 dark:border-white/10">
                 <th className="pb-3 font-medium">{t.id}</th>
                 <th className="pb-3 font-medium">{t.time}</th>
+                <th className="pb-3 font-medium">{t.cashier}</th>
                 <th className="pb-3 font-medium">{t.type}</th>
                 <th className="pb-3 font-medium">{t.method}</th>
                 <th className="pb-3 font-medium text-right">{t.amount}</th>
@@ -191,6 +192,7 @@ export default function Dashboard() {
                 <tr key={tx.id} className="border-b border-black/5 dark:border-white/5 hover:bg-black/5 dark:bg-white/5 transition-colors">
                   <td className="py-4 font-mono text-amber-500 dark:text-amber-400">#{tx.id}</td>
                   <td className="py-4 text-slate-900 dark:text-white">{new Date(tx.created_at).toLocaleTimeString()}</td>
+                  <td className="py-4 text-slate-900 dark:text-white font-medium">{tx.cashier_name || '-'}</td>
                   <td className="py-4 capitalize text-slate-900 dark:text-white">
                     {tx.type === 'paid' ? t.paid : tx.type === 'complementary' ? t.complementary : tx.type}
                   </td>

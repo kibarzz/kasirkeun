@@ -17,12 +17,14 @@ export default function Menu() {
   // Modals state
   const [isAddProductModalOpen, setIsAddProductModalOpen] = useState(false);
   const [isEditProductModalOpen, setIsEditProductModalOpen] = useState(false);
+  const [isAddVariantModalOpen, setIsAddVariantModalOpen] = useState(false);
   const [isEditVariantModalOpen, setIsEditVariantModalOpen] = useState(false);
   const [isAddRecipeModalOpen, setIsAddRecipeModalOpen] = useState(false);
   const [selectedVariantForRecipe, setSelectedVariantForRecipe] = useState<any>(null);
   const [selectedVariantForEdit, setSelectedVariantForEdit] = useState<any>(null);
   const [deletingProductId, setDeletingProductId] = useState<number | null>(null);
   const [deletingRecipeItemId, setDeletingRecipeItemId] = useState<number | null>(null);
+  const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
 
   // Add Product Form State
   const [newProduct, setNewProduct] = useState({
@@ -37,6 +39,15 @@ export default function Menu() {
     name: '',
     category: '',
     image_url: '',
+  });
+
+  // Add Variant Form State
+  const [addVariantForm, setAddVariantForm] = useState({
+    name: '',
+    dine_in_price: '',
+    online_price: '',
+    dine_in_discount: '',
+    online_discount: '',
   });
 
   // Edit Variant Form State
@@ -56,6 +67,16 @@ export default function Menu() {
   }]);
 
   const [formError, setFormError] = useState('');
+
+  const convertGoogleDriveLink = (url: string) => {
+    if (url.includes('drive.google.com')) {
+      const match = url.match(/\/d\/(.+?)\/(view|edit)?/);
+      if (match && match[1]) {
+        return `https://drive.google.com/uc?export=view&id=${match[1]}`;
+      }
+    }
+    return url;
+  };
 
   const fetchData = () => {
     fetch('/api/products')
@@ -196,6 +217,56 @@ export default function Menu() {
       }
     } catch (err) {
       setFormError(t.errorOccurred);
+    }
+  };
+
+  const handleAddVariant = async (e: FormEvent) => {
+    e.preventDefault();
+    setFormError('');
+
+    if (!addVariantForm.name || !addVariantForm.dine_in_price || !addVariantForm.online_price) {
+      setFormError(t.fillAllFields);
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/variants', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          product_id: selectedProduct.id,
+          name: addVariantForm.name,
+          dine_in_price: parseFloat(addVariantForm.dine_in_price),
+          online_price: parseFloat(addVariantForm.online_price),
+          dine_in_discount: parseFloat(addVariantForm.dine_in_discount) || 0,
+          online_discount: parseFloat(addVariantForm.online_discount) || 0
+        })
+      });
+
+      if (response.ok) {
+        setIsAddVariantModalOpen(false);
+        setAddVariantForm({ name: '', dine_in_price: '', online_price: '', dine_in_discount: '', online_discount: '' });
+        fetchData();
+      } else {
+        setFormError(t.failedToAddVariant || "Failed to add variant");
+      }
+    } catch (err) {
+      setFormError(t.errorOccurred);
+    }
+  };
+
+  const handleDeleteVariant = async (id: number) => {
+    if (!confirm(t.confirmDeleteVariant || "Are you sure you want to delete this variant?")) return;
+    
+    try {
+      const response = await fetch(`/api/variants/${id}`, { method: 'DELETE' });
+      if (response.ok) {
+        fetchData();
+      } else {
+        alert(t.failedToDeleteVariant || "Failed to delete variant");
+      }
+    } catch (err) {
+      alert(t.errorOccurred);
     }
   };
 
@@ -412,12 +483,13 @@ export default function Menu() {
                   )}
                 >
                   <div className="flex items-center gap-4">
-                    {product.image_url ? (
+                    {product.image_url && !failedImages[product.id] ? (
                       <img 
                         src={product.image_url} 
                         alt={product.name} 
                         className="w-12 h-12 rounded-xl object-cover shrink-0" 
                         referrerPolicy="no-referrer"
+                        onError={() => setFailedImages(prev => ({ ...prev, [product.id]: true }))}
                       />
                     ) : (
                       <div className="w-12 h-12 rounded-xl bg-black/10 dark:bg-white/10 flex items-center justify-center shrink-0">
@@ -493,9 +565,17 @@ export default function Menu() {
               </div>
 
               <div className="flex-1 overflow-y-auto custom-scrollbar pr-2">
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-                  <Layers className="w-5 h-5" /> {t.variantsAndRecipes}
-                </h3>
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+                    <Layers className="w-5 h-5" /> {t.variantsAndRecipes}
+                  </h3>
+                  <button 
+                    onClick={() => setIsAddVariantModalOpen(true)}
+                    className="text-xs bg-indigo-500 hover:bg-indigo-400 text-white px-3 py-1.5 rounded-lg transition-colors shadow-lg shadow-indigo-500/20 flex items-center gap-1"
+                  >
+                    <Plus className="w-3 h-3" /> {t.addVariant}
+                  </button>
+                </div>
                 
                 <div className="space-y-6">
                   {variants.filter(v => v.product_id === selectedProduct.id).map(variant => {
@@ -523,6 +603,12 @@ export default function Menu() {
                                 className="text-[10px] text-indigo-400 hover:text-indigo-300 underline"
                               >
                                 {t.edit}
+                              </button>
+                              <button 
+                                onClick={() => handleDeleteVariant(variant.id)}
+                                className="text-[10px] text-rose-400 hover:text-rose-300 underline"
+                              >
+                                {t.delete}
                               </button>
                             </div>
                             <div className="flex flex-col gap-1 mt-2">
@@ -644,6 +730,16 @@ export default function Menu() {
                         accept="image/*"
                         onChange={e => handleImageUpload(e, false)}
                         className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-500/20 file:text-indigo-400 hover:file:bg-indigo-500/30"
+                      />
+                    </div>
+                    <div className="mt-2">
+                      <p className="text-[10px] text-slate-400 mb-1">{t.pasteImageUrl}</p>
+                      <input 
+                        type="text"
+                        value={newProduct.image_url}
+                        onChange={e => setNewProduct({...newProduct, image_url: convertGoogleDriveLink(e.target.value)})}
+                        placeholder={t.pasteImageUrlPlaceholder}
+                        className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
                       />
                     </div>
                   </div>
@@ -819,6 +915,16 @@ export default function Menu() {
                         className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-500/20 file:text-indigo-400 hover:file:bg-indigo-500/30"
                       />
                     </div>
+                    <div className="mt-2">
+                      <p className="text-[10px] text-slate-400 mb-1">{t.pasteImageUrl}</p>
+                      <input 
+                        type="text"
+                        value={editProductForm.image_url}
+                        onChange={e => setEditProductForm({...editProductForm, image_url: convertGoogleDriveLink(e.target.value)})}
+                        placeholder={t.pasteImageUrlPlaceholder}
+                        className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                      />
+                    </div>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-500 dark:text-white/60 mb-1">{t.productName}</label>
@@ -861,6 +967,105 @@ export default function Menu() {
                 {t.saveChanges}
               </button>
             </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Add Variant Modal */}
+      {isAddVariantModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white dark:bg-slate-900 border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+          >
+            <div className="flex justify-between items-center p-6 border-b border-black/10 dark:border-white/10">
+              <h2 className="text-xl font-semibold text-slate-900 dark:text-white">{t.addVariant}</h2>
+              <button 
+                onClick={() => setIsAddVariantModalOpen(false)}
+                className="text-slate-400 dark:text-white/40 hover:text-slate-900 dark:text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <form onSubmit={handleAddVariant} className="p-6 space-y-4">
+              {formError && (
+                <div className="p-3 rounded-lg bg-rose-500/20 border border-rose-500/20 text-rose-400 text-sm">
+                  {formError}
+                </div>
+              )}
+              
+              <div>
+                <label className="block text-sm font-medium text-slate-500 dark:text-white/60 mb-1">{t.variantName}</label>
+                <input 
+                  type="text" 
+                  value={addVariantForm.name}
+                  onChange={e => setAddVariantForm({...addVariantForm, name: e.target.value})}
+                  className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                  placeholder="e.g. Large"
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-500 dark:text-white/60 mb-1">{t.dineInPrice}</label>
+                  <input 
+                    type="number" 
+                    value={addVariantForm.dine_in_price}
+                    onChange={e => setAddVariantForm({...addVariantForm, dine_in_price: e.target.value})}
+                    className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 font-mono"
+                    placeholder="0"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-500 dark:text-white/60 mb-1">{t.onlinePrice}</label>
+                  <input 
+                    type="number" 
+                    value={addVariantForm.online_price}
+                    onChange={e => setAddVariantForm({...addVariantForm, online_price: e.target.value})}
+                    className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 font-mono"
+                    placeholder="0"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-500 dark:text-white/60 mb-1">{t.discount} (Dine-in %)</label>
+                  <input 
+                    type="number" 
+                    value={addVariantForm.dine_in_discount}
+                    onChange={e => setAddVariantForm({...addVariantForm, dine_in_discount: e.target.value})}
+                    className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 font-mono"
+                    placeholder="0"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-500 dark:text-white/60 mb-1">{t.discount} (Online %)</label>
+                  <input 
+                    type="number" 
+                    value={addVariantForm.online_discount}
+                    onChange={e => setAddVariantForm({...addVariantForm, online_discount: e.target.value})}
+                    className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 font-mono"
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+              
+              <div className="flex justify-end gap-3 mt-6">
+                <button 
+                  type="button"
+                  onClick={() => setIsAddVariantModalOpen(false)}
+                  className="px-4 py-2 rounded-xl font-medium text-slate-600 dark:text-white/70 hover:text-slate-900 dark:text-white hover:bg-black/10 dark:bg-white/10 transition-colors"
+                >
+                  {t.cancel}
+                </button>
+                <button 
+                  type="submit"
+                  className="bg-indigo-500 hover:bg-indigo-400 text-white px-6 py-2 rounded-xl font-medium transition-colors shadow-lg shadow-indigo-500/20"
+                >
+                  {t.addVariant}
+                </button>
+              </div>
+            </form>
           </motion.div>
         </div>
       )}

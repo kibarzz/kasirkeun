@@ -13,6 +13,7 @@ export default function Promotions() {
   const [deletingPromoId, setDeletingPromoId] = useState<number | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
   const [filterType, setFilterType] = useState('all');
+  const [isSaving, setIsSaving] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -67,8 +68,16 @@ export default function Promotions() {
     }
   };
 
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSave = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+
+    if (currentStep < 3) return;
+
+    if (formData.product_ids.length === 0) {
+      if (!confirm(t.noProductsSelectedWarning || "No products selected for this promotion. It will not apply to any items. Continue?")) {
+        return;
+      }
+    }
 
     if (formData.type === 'buy_x_get_y' || formData.type === 'fixed_price' || formData.type === 'bundle') {
       if (formData.buy_qty) {
@@ -95,6 +104,7 @@ export default function Promotions() {
       }
     }
 
+    setIsSaving(true);
     const url = editingPromo ? `/api/promotions/${editingPromo.id}` : '/api/promotions';
     const method = editingPromo ? 'PUT' : 'POST';
 
@@ -123,6 +133,8 @@ export default function Promotions() {
       }
     } catch (error) {
       console.error('Failed to save promotion', error);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -388,7 +400,12 @@ export default function Promotions() {
             </div>
 
             <div className="p-6 overflow-y-auto custom-scrollbar flex-1">
-              <form id="promo-form" onSubmit={handleSave} className="space-y-6">
+              <form 
+                id="promo-form" 
+                onSubmit={(e) => e.preventDefault()} 
+                onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault(); }}
+                className="space-y-6"
+              >
                 {currentStep === 1 && (
                   <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
                     <div className="grid grid-cols-2 gap-6">
@@ -602,9 +619,21 @@ export default function Promotions() {
 
                 {currentStep === 3 && (
                   <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
+                    <div className="bg-indigo-500/5 p-4 rounded-2xl border border-indigo-500/10 mb-4">
+                      <h4 className="text-sm font-bold text-indigo-500 flex items-center gap-2 mb-1">
+                        <Package className="w-4 h-4" />
+                        {t.step3}: {t.applicableProducts}
+                      </h4>
+                      <p className="text-xs text-slate-500 dark:text-white/60">
+                        {t.selectProductsDescription || "Select which products this promotion applies to. If no products are selected, the promotion will not be active."}
+                      </p>
+                    </div>
+
                     <div>
                       <div className="flex justify-between items-center mb-3">
-                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">{t.applicableProducts}</label>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                          {t.applicableProducts} <span className="text-indigo-500 font-bold">({formData.product_ids.length})</span>
+                        </label>
                         <button
                           type="button"
                           onClick={() => {
@@ -666,11 +695,20 @@ export default function Promotions() {
                   </button>
                 ) : (
                   <button
-                    type="submit"
-                    form="promo-form"
-                    className="px-6 py-3 bg-indigo-500 hover:bg-indigo-600 text-white font-medium rounded-xl transition-colors shadow-lg shadow-indigo-500/25"
+                    type="button"
+                    disabled={isSaving}
+                    onClick={() => handleSave()}
+                    className={clsx(
+                      "px-6 py-3 bg-indigo-500 hover:bg-indigo-600 text-white font-medium rounded-xl transition-colors shadow-lg shadow-indigo-500/25 flex items-center gap-2",
+                      isSaving && "opacity-50 cursor-not-allowed"
+                    )}
                   >
-                    {t.savePromotion}
+                    {isSaving ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                        {t.saving || 'Saving...'}
+                      </>
+                    ) : t.savePromotion}
                   </button>
                 )}
               </div>

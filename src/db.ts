@@ -28,6 +28,33 @@ export const initDB = async () => {
     `);
 
     await db.execute(`
+      CREATE TABLE IF NOT EXISTS suppliers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT,
+        contact_person TEXT,
+        phone TEXT,
+        email TEXT,
+        address TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS shifts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        start_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+        end_time DATETIME,
+        starting_cash REAL DEFAULT 0,
+        ending_cash_actual REAL,
+        ending_cash_expected REAL,
+        status TEXT DEFAULT 'open', -- 'open', 'closed'
+        notes TEXT,
+        FOREIGN KEY(user_id) REFERENCES users(id)
+      );
+    `);
+
+    await db.execute(`
       CREATE TABLE IF NOT EXISTS ingredients (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT,
@@ -250,7 +277,14 @@ export const initDB = async () => {
       'ALTER TABLE product_variants ADD COLUMN dine_in_discount REAL DEFAULT 0',
       'ALTER TABLE product_variants ADD COLUMN online_discount REAL DEFAULT 0',
       'ALTER TABLE transaction_items ADD COLUMN notes TEXT',
-      'ALTER TABLE transaction_items ADD COLUMN modifiers TEXT'
+      'ALTER TABLE transaction_items ADD COLUMN modifiers TEXT',
+      'ALTER TABLE ingredients ADD COLUMN supplier_id INTEGER',
+      'ALTER TABLE customers ADD COLUMN points INTEGER DEFAULT 0',
+      'ALTER TABLE transactions ADD COLUMN points_earned INTEGER DEFAULT 0',
+      'ALTER TABLE transactions ADD COLUMN points_redeemed INTEGER DEFAULT 0',
+      'ALTER TABLE transactions ADD COLUMN shift_id INTEGER',
+      'ALTER TABLE settings ADD COLUMN points_per_amount REAL DEFAULT 10000',
+      'ALTER TABLE settings ADD COLUMN redeem_value_per_point REAL DEFAULT 100'
     ];
 
 

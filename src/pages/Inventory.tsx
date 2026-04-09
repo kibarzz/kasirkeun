@@ -6,16 +6,26 @@ import { useLanguage } from '../i18n';
 
 export default function Inventory() {
   const [ingredients, setIngredients] = useState<any[]>([]);
+  const [suppliers, setSuppliers] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState('list'); // list, opname, waste
+  const [activeTab, setActiveTab] = useState('list'); // list, opname, waste, suppliers
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false);
   const [newIngredient, setNewIngredient] = useState({
     name: '',
     unit: '',
     stock: '',
     min_stock: '',
     unit_cost: '',
-    priority: 'Medium'
+    priority: 'Medium',
+    supplier_id: ''
+  });
+  const [newSupplier, setNewSupplier] = useState({
+    name: '',
+    contact_person: '',
+    phone: '',
+    email: '',
+    address: ''
   });
   const [formError, setFormError] = useState('');
   const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
@@ -26,13 +36,15 @@ export default function Inventory() {
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedIngredient, setSelectedIngredient] = useState<any>(null);
+  const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
   const [editIngredient, setEditIngredient] = useState({
     name: '',
     unit: '',
     stock: '',
     min_stock: '',
     unit_cost: '',
-    priority: 'Medium'
+    priority: 'Medium',
+    supplier_id: ''
   });
 
   // Waste state
@@ -59,6 +71,7 @@ export default function Inventory() {
 
   useEffect(() => {
     fetchIngredients();
+    fetchSuppliers();
   }, []);
 
   useEffect(() => {
@@ -76,6 +89,12 @@ export default function Inventory() {
     fetch('/api/ingredients')
       .then(res => res.json())
       .then(data => setIngredients(data));
+  };
+
+  const fetchSuppliers = () => {
+    fetch('/api/suppliers')
+      .then(res => res.json())
+      .then(data => setSuppliers(data));
   };
 
   const filteredIngredients = ingredients.filter(i => 
@@ -413,7 +432,7 @@ export default function Inventory() {
       )}
 
       <div className="flex border-b border-black/10 dark:border-white/10 w-full overflow-x-auto no-scrollbar mb-6">
-        {['list', 'opname', 'waste'].map(tab => (
+        {['list', 'opname', 'waste', 'suppliers'].map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -422,7 +441,7 @@ export default function Inventory() {
               activeTab === tab ? 'border-emerald-500 text-emerald-400' : 'border-transparent text-slate-400 dark:text-white/40 hover:text-slate-600 dark:text-white/80 hover:border-black/20 dark:border-white/20'
             )}
           >
-            {tab === 'list' ? t.list : tab === 'opname' ? t.opname : t.waste}
+            {tab === 'list' ? t.list : tab === 'opname' ? t.opname : tab === 'waste' ? t.waste : 'Suppliers'}
           </button>
         ))}
       </div>
@@ -736,7 +755,21 @@ export default function Inventory() {
                   </div>
                 </div>
                 
-                <div className="pt-4">
+                <div>
+                <label className="block text-sm font-medium text-slate-500 dark:text-white/60 mb-1">Supplier</label>
+                <select 
+                  value={newIngredient.supplier_id}
+                  onChange={e => setNewIngredient({...newIngredient, supplier_id: e.target.value})}
+                  className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                >
+                  <option value="">No Supplier</option>
+                  {suppliers.map(s => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+              </div>
+              
+              <div className="pt-4">
                   <button 
                     type="submit"
                     disabled={isSubmittingWaste}
@@ -746,6 +779,70 @@ export default function Inventory() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+        {activeTab === 'suppliers' && (
+          <div className="flex-1 flex flex-col overflow-hidden relative z-10">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+              <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Supplier Management</h2>
+              <button 
+                onClick={() => {
+                  setSelectedSupplier(null);
+                  setNewSupplier({ name: '', contact_person: '', phone: '', email: '', address: '' });
+                  setIsSupplierModalOpen(true);
+                }}
+                className="bg-emerald-500 hover:bg-emerald-400 text-white px-4 py-2 rounded-xl font-medium flex items-center gap-2 transition-colors shadow-lg shadow-emerald-500/20"
+              >
+                <Plus className="w-4 h-4" /> Add Supplier
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-auto custom-scrollbar">
+              <table className="w-full text-left border-collapse min-w-[800px]">
+                <thead>
+                  <tr className="border-b border-black/10 dark:border-white/10 text-slate-500 dark:text-white/50 text-sm uppercase tracking-wider">
+                    <th className="pb-3 font-medium pl-4">Name</th>
+                    <th className="pb-3 font-medium">Contact Person</th>
+                    <th className="pb-3 font-medium">Phone</th>
+                    <th className="pb-3 font-medium">Email</th>
+                    <th className="pb-3 font-medium text-right pr-4">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="text-slate-900 dark:text-white/90">
+                  {suppliers.map(s => (
+                    <tr key={s.id} className="border-b border-black/5 dark:border-white/5 hover:bg-black/5 dark:bg-white/5 transition-colors group">
+                      <td className="py-4 pl-4 font-medium text-slate-900 dark:text-white">{s.name}</td>
+                      <td className="py-4 text-slate-500 dark:text-white/60">{s.contact_person}</td>
+                      <td className="py-4 text-slate-500 dark:text-white/60">{s.phone}</td>
+                      <td className="py-4 text-slate-500 dark:text-white/60">{s.email}</td>
+                      <td className="py-4 text-right pr-4">
+                        <button 
+                          onClick={() => {
+                            setSelectedSupplier(s);
+                            setNewSupplier({ ...s });
+                            setIsSupplierModalOpen(true);
+                          }}
+                          className="text-slate-400 dark:text-white/40 hover:text-slate-900 dark:text-white transition-colors p-2 mr-2"
+                        >
+                          {t.edit}
+                        </button>
+                        <button 
+                          onClick={async () => {
+                            if (confirm('Are you sure you want to delete this supplier?')) {
+                              const res = await fetch(`/api/suppliers/${s.id}`, { method: 'DELETE' });
+                              if (res.ok) fetchSuppliers();
+                            }
+                          }}
+                          className="text-rose-400 hover:text-rose-500 transition-colors p-2"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         )}
@@ -844,6 +941,20 @@ export default function Inventory() {
                   <option value="Low" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">{t.low}</option>
                   <option value="Medium" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">{t.medium}</option>
                   <option value="High" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">{t.high}</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-500 dark:text-white/60 mb-1">Supplier</label>
+                <select 
+                  value={newIngredient.supplier_id}
+                  onChange={e => setNewIngredient({...newIngredient, supplier_id: e.target.value})}
+                  className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                >
+                  <option value="">No Supplier</option>
+                  {suppliers.map(s => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
                 </select>
               </div>
               
@@ -959,6 +1070,20 @@ export default function Inventory() {
                   <option value="Low" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">{t.low}</option>
                   <option value="Medium" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">{t.medium}</option>
                   <option value="High" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">{t.high}</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-500 dark:text-white/60 mb-1">Supplier</label>
+                <select 
+                  value={editIngredient.supplier_id}
+                  onChange={e => setEditIngredient({...editIngredient, supplier_id: e.target.value})}
+                  className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                >
+                  <option value="">No Supplier</option>
+                  {suppliers.map(s => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
                 </select>
               </div>
               
@@ -1102,6 +1227,109 @@ export default function Inventory() {
                   )}
                 >
                   {t.confirmAdjustment}
+                </button>
+              </div>
+            </form>
+          </motion.div>
+        </div>
+      )}
+      {isSupplierModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white dark:bg-slate-900 border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+          >
+            <div className="flex justify-between items-center p-6 border-b border-black/10 dark:border-white/10">
+              <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
+                {selectedSupplier ? 'Edit Supplier' : 'Add New Supplier'}
+              </h2>
+              <button 
+                onClick={() => setIsSupplierModalOpen(false)}
+                className="text-slate-400 dark:text-white/40 hover:text-slate-900 dark:text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <form 
+              onSubmit={async (e) => {
+                e.preventDefault();
+                const method = selectedSupplier ? 'PUT' : 'POST';
+                const url = selectedSupplier ? `/api/suppliers/${selectedSupplier.id}` : '/api/suppliers';
+                const res = await fetch(url, {
+                  method,
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(newSupplier)
+                });
+                if (res.ok) {
+                  fetchSuppliers();
+                  setIsSupplierModalOpen(false);
+                }
+              }} 
+              className="p-6 space-y-4"
+            >
+              <div>
+                <label className="block text-sm font-medium text-slate-500 dark:text-white/60 mb-1">Supplier Name</label>
+                <input 
+                  type="text" 
+                  value={newSupplier.name}
+                  onChange={e => setNewSupplier({...newSupplier, name: e.target.value})}
+                  className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-500 dark:text-white/60 mb-1">Contact Person</label>
+                <input 
+                  type="text" 
+                  value={newSupplier.contact_person}
+                  onChange={e => setNewSupplier({...newSupplier, contact_person: e.target.value})}
+                  className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-500 dark:text-white/60 mb-1">Phone</label>
+                  <input 
+                    type="text" 
+                    value={newSupplier.phone}
+                    onChange={e => setNewSupplier({...newSupplier, phone: e.target.value})}
+                    className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-500 dark:text-white/60 mb-1">Email</label>
+                  <input 
+                    type="email" 
+                    value={newSupplier.email}
+                    onChange={e => setNewSupplier({...newSupplier, email: e.target.value})}
+                    className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-500 dark:text-white/60 mb-1">Address</label>
+                <textarea 
+                  value={newSupplier.address}
+                  onChange={e => setNewSupplier({...newSupplier, address: e.target.value})}
+                  className="w-full bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50 h-20 resize-none"
+                />
+              </div>
+              
+              <div className="pt-4 flex gap-3">
+                <button 
+                  type="button"
+                  onClick={() => setIsSupplierModalOpen(false)}
+                  className="flex-1 px-4 py-2 rounded-xl font-medium text-slate-500 dark:text-white/60 hover:text-slate-900 dark:text-white hover:bg-black/5 dark:bg-white/5 transition-colors"
+                >
+                  {t.cancel}
+                </button>
+                <button 
+                  type="submit"
+                  className="flex-1 bg-emerald-500 hover:bg-emerald-400 text-white px-4 py-2 rounded-xl font-medium transition-colors shadow-lg shadow-emerald-500/20"
+                >
+                  {selectedSupplier ? 'Update Supplier' : 'Save Supplier'}
                 </button>
               </div>
             </form>

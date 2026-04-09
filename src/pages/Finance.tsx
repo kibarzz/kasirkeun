@@ -14,13 +14,20 @@ export default function Finance() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [newCost, setNewCost] = useState({ name: '', type: 'Fixed', amount: '', period: 'Monthly' });
   const [deletingCostId, setDeletingCostId] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState<'expenses' | 'sales' | 'daily'>('sales');
+  const [activeTab, setActiveTab] = useState<'expenses' | 'sales' | 'daily' | 'cashiers' | 'shifts' | 'suppliers'>('sales');
 
   // Sales Report State
   const [salesReport, setSalesReport] = useState<any[]>([]);
+  const [cashierPerformance, setCashierPerformance] = useState<any[]>([]);
+  const [shifts, setShifts] = useState<any[]>([]);
+  const [supplierReports, setSupplierReports] = useState<any[]>([]);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedCashier, setSelectedCashier] = useState<any>(null);
   const [dateDetails, setDateDetails] = useState<any[]>([]);
+  const [cashierDetails, setCashierDetails] = useState<any[]>([]);
   const [loadingDetails, setLoadingDetails] = useState(false);
+  const [loadingCashierDetails, setLoadingCashierDetails] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [dateRange, setDateRange] = useState({
     startDate: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
     endDate: new Date().toISOString().split('T')[0]
@@ -29,7 +36,40 @@ export default function Finance() {
   useEffect(() => {
     fetchCosts();
     fetchSalesReport();
+    fetchCashierPerformance();
+    fetchShifts();
+    fetchSupplierReports();
   }, [dateRange]);
+
+  const fetchShifts = async () => {
+    try {
+      const res = await fetch(`/api/shifts?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`);
+      if (res.ok) setShifts(await res.json());
+    } catch (error) {
+      console.error('Error fetching shifts:', error);
+    }
+  };
+
+  const fetchSupplierReports = async () => {
+    // This could be a summary of purchases or just the supplier list for now
+    try {
+      const res = await fetch('/api/suppliers');
+      if (res.ok) setSupplierReports(await res.json());
+    } catch (error) {
+      console.error('Error fetching supplier reports:', error);
+    }
+  };
+
+  const fetchCashierPerformance = async () => {
+    try {
+      const res = await fetch(`/api/cashier-performance?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`);
+      if (!res.ok) throw new Error('Failed to fetch cashier performance');
+      const data = await res.json();
+      setCashierPerformance(data);
+    } catch (error) {
+      console.error('Error fetching cashier performance:', error);
+    }
+  };
 
   const fetchSalesReport = async () => {
     try {
@@ -56,6 +96,21 @@ export default function Finance() {
       console.error('Error fetching date details:', error);
     } finally {
       setLoadingDetails(false);
+    }
+  };
+
+  const fetchCashierDetails = async (cashier: any) => {
+    setSelectedCashier(cashier);
+    setLoadingCashierDetails(true);
+    try {
+      const res = await fetch(`/api/cashier-performance/details?userId=${cashier.id}&startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`);
+      if (!res.ok) throw new Error('Failed to fetch cashier details');
+      const data = await res.json();
+      setCashierDetails(data);
+    } catch (error) {
+      console.error('Error fetching cashier details:', error);
+    } finally {
+      setLoadingCashierDetails(false);
     }
   };
 
@@ -104,55 +159,167 @@ export default function Finance() {
   const totalHPP = salesReport.reduce((sum, r) => sum + r.total_hpp, 0);
   const totalProfit = salesReport.reduce((sum, r) => sum + r.profit, 0);
   const totalTransactions = salesReport.reduce((sum, r) => sum + r.transactions, 0);
+  const totalTax = salesReport.reduce((sum, r) => sum + (r.tax || 0), 0);
+  const totalDiscount = salesReport.reduce((sum, r) => sum + (r.discount || 0), 0);
 
-  const exportPDF = () => {
-    const doc = new jsPDF();
-    doc.text(t.salesReport, 14, 15);
-    doc.text(`${t.dateRange}: ${dateRange.startDate} - ${dateRange.endDate}`, 14, 25);
-    
-    const tableData = salesReport.map(r => [
-      r.date,
-      r.transactions,
-      formatCurrency(r.revenue),
-      formatCurrency(r.total_hpp),
-      formatCurrency(r.profit)
-    ]);
+  const exportPDF = async () => {
+    setIsExporting(true);
+    try {
+      const doc = new jsPDF();
+      const title = activeTab === 'sales' ? t.salesReport : t.dailySalesReport;
+      doc.text(title, 14, 15);
+      doc.text(`${t.dateRange}: ${dateRange.startDate} - ${dateRange.endDate}`, 14, 25);
+      
+      if (activeTab === 'sales') {
+        const head = [[t.date, t.transactions, t.revenue, 'Tax', 'Discount', t.hpp, t.profit]];
+        const body = salesReport.map(r => [
+          r.date,
+          r.transactions,
+          formatCurrency(r.revenue),
+          formatCurrency(r.tax || 0),
+          formatCurrency(r.discount || 0),
+          formatCurrency(r.total_hpp),
+          formatCurrency(r.profit)
+        ]);
+        const foot = [[
+          t.total, 
+          totalTransactions, 
+          formatCurrency(totalRevenue), 
+          formatCurrency(totalTax),
+          formatCurrency(totalDiscount),
+          formatCurrency(totalHPP), 
+          formatCurrency(totalProfit)
+        ]];
 
-    autoTable(doc, {
-      startY: 30,
-      head: [[t.date, t.transactions, t.revenue, t.hpp, t.profit]],
-      body: tableData,
-      foot: [[t.total, totalTransactions, formatCurrency(totalRevenue), formatCurrency(totalHPP), formatCurrency(totalProfit)]],
-    });
+        autoTable(doc, {
+          startY: 30,
+          head: head,
+          body: body,
+          foot: foot,
+        });
+      } else {
+        // Detailed Transaction Export for Daily Tab
+        const res = await fetch(`/api/sales-report/full-export?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`);
+        const transactions = await res.json();
 
-    doc.save(`sales-report-${dateRange.startDate}-to-${dateRange.endDate}.pdf`);
+        const head = [['ID', t.date, t.cashier, 'Customer', 'Items', t.revenue, 'Payment']];
+        const body = transactions.map((tx: any) => [
+          tx.id,
+          new Date(tx.created_at).toLocaleString(),
+          tx.cashier,
+          tx.customer_name || '-',
+          tx.items.map((i: any) => `${i.product_name} (x${i.qty})`).join(', '),
+          formatCurrency(tx.final_amount),
+          tx.payment_method
+        ]);
+
+        autoTable(doc, {
+          startY: 30,
+          head: head,
+          body: body,
+          styles: { fontSize: 8 },
+          columnStyles: {
+            4: { cellWidth: 60 } // Items column width
+          }
+        });
+      }
+
+      const fileName = activeTab === 'sales' ? 'sales-summary' : 'transaction-details';
+      doc.save(`${fileName}-${dateRange.startDate}-to-${dateRange.endDate}.pdf`);
+    } catch (error) {
+      console.error('Export failed:', error);
+    } finally {
+      setIsExporting(false);
+    }
   };
 
-  const exportExcel = () => {
-    const wsData = [
-      [t.date, t.transactions, t.revenue, t.hpp, t.profit],
-      ...salesReport.map(r => [r.date, r.transactions, r.revenue, r.total_hpp, r.profit]),
-      [t.total, totalTransactions, totalRevenue, totalHPP, totalProfit]
-    ];
-    const ws = XLSX.utils.aoa_to_sheet(wsData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, t.salesReport);
-    XLSX.writeFile(wb, `sales-report-${dateRange.startDate}-to-${dateRange.endDate}.xlsx`);
+  const exportExcel = async () => {
+    setIsExporting(true);
+    try {
+      let wsData;
+      let fileName;
+      if (activeTab === 'sales') {
+        wsData = [
+          [t.date, t.transactions, t.revenue, 'Tax', 'Discount', t.hpp, t.profit],
+          ...salesReport.map(r => [r.date, r.transactions, r.revenue, r.tax || 0, r.discount || 0, r.total_hpp, r.profit]),
+          [t.total, totalTransactions, totalRevenue, totalTax, totalDiscount, totalHPP, totalProfit]
+        ];
+        fileName = 'sales-summary';
+      } else {
+        const res = await fetch(`/api/sales-report/full-export?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`);
+        const transactions = await res.json();
+        
+        wsData = [
+          ['ID', 'Date Time', 'Cashier', 'Customer', 'Items', 'Total Amount', 'Tax', 'Discount', 'Final Amount', 'Payment Method', 'Channel'],
+          ...transactions.map((tx: any) => [
+            tx.id,
+            new Date(tx.created_at).toLocaleString(),
+            tx.cashier,
+            tx.customer_name || '-',
+            tx.items.map((i: any) => `${i.product_name} (x${i.qty})`).join(', '),
+            tx.total_amount,
+            tx.tax_amount,
+            tx.discount_amount,
+            tx.final_amount,
+            tx.payment_method,
+            tx.channel
+          ])
+        ];
+        fileName = 'transaction-details';
+      }
+      const ws = XLSX.utils.aoa_to_sheet(wsData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Report');
+      XLSX.writeFile(wb, `${fileName}-${dateRange.startDate}-to-${dateRange.endDate}.xlsx`);
+    } catch (error) {
+      console.error('Export failed:', error);
+    } finally {
+      setIsExporting(false);
+    }
   };
 
-  const exportCSV = () => {
-    const wsData = [
-      [t.date, t.transactions, t.revenue, t.hpp, t.profit],
-      ...salesReport.map(r => [r.date, r.transactions, r.revenue, r.total_hpp, r.profit]),
-      [t.total, totalTransactions, totalRevenue, totalHPP, totalProfit]
-    ];
-    const ws = XLSX.utils.aoa_to_sheet(wsData);
-    const csv = XLSX.utils.sheet_to_csv(ws);
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `sales-report-${dateRange.startDate}-to-${dateRange.endDate}.csv`;
-    link.click();
+  const exportCSV = async () => {
+    setIsExporting(true);
+    try {
+      let wsData;
+      let fileName;
+      if (activeTab === 'sales') {
+        wsData = [
+          [t.date, t.transactions, t.revenue, t.hpp, t.profit],
+          ...salesReport.map(r => [r.date, r.transactions, r.revenue, r.total_hpp, r.profit]),
+          [t.total, totalTransactions, totalRevenue, totalHPP, totalProfit]
+        ];
+        fileName = 'sales-summary';
+      } else {
+        const res = await fetch(`/api/sales-report/full-export?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`);
+        const transactions = await res.json();
+        
+        wsData = [
+          ['ID', 'Date Time', 'Cashier', 'Customer', 'Items', 'Final Amount', 'Payment Method'],
+          ...transactions.map((tx: any) => [
+            tx.id,
+            new Date(tx.created_at).toLocaleString(),
+            tx.cashier,
+            tx.customer_name || '-',
+            tx.items.map((i: any) => `${i.product_name} (x${i.qty})`).join(', '),
+            tx.final_amount,
+            tx.payment_method
+          ])
+        ];
+        fileName = 'transaction-details';
+      }
+      const ws = XLSX.utils.aoa_to_sheet(wsData);
+      const csv = XLSX.utils.sheet_to_csv(ws);
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `${fileName}-${dateRange.startDate}-to-${dateRange.endDate}.csv`;
+      link.click();
+    } catch (error) {
+      console.error('Export failed:', error);
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   return (
@@ -173,7 +340,7 @@ export default function Finance() {
       </div>
 
       <div className="flex border-b border-black/10 dark:border-white/10 w-full overflow-x-auto no-scrollbar">
-        {['sales', 'daily', 'expenses'].map(tab => (
+        {['sales', 'daily', 'cashiers', 'shifts', 'expenses'].map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab as any)}
@@ -182,10 +349,103 @@ export default function Finance() {
               activeTab === tab ? 'border-amber-500 text-amber-400' : 'border-transparent text-slate-400 dark:text-white/40 hover:text-slate-600 dark:text-white/80 hover:border-black/20 dark:border-white/20'
             )}
           >
-            {tab === 'sales' ? t.salesReport : tab === 'daily' ? t.dailySalesReport : t.overheadExpenses}
+            {tab === 'sales' ? t.salesReport : tab === 'daily' ? t.dailySalesReport : tab === 'cashiers' ? (t.cashierPerformance || "Cashier Performance") : tab === 'shifts' ? "Shift Reports" : t.overheadExpenses}
           </button>
         ))}
       </div>
+
+      {activeTab === 'suppliers' && (
+        <div className="flex-1 flex flex-col gap-6">
+          <div className="bg-black/5 dark:bg-white/5 backdrop-blur-xl border border-black/10 dark:border-white/10 rounded-3xl p-6 shadow-2xl overflow-hidden flex flex-col min-h-0">
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-6">Supplier Directory & Reports</h2>
+            <div className="flex-1 overflow-x-auto custom-scrollbar">
+              <table className="w-full text-left border-collapse min-w-[800px]">
+                <thead>
+                  <tr className="text-slate-400 dark:text-white/40 text-sm border-b border-black/10 dark:border-white/10">
+                    <th className="pb-3 font-medium">Supplier Name</th>
+                    <th className="pb-3 font-medium">Contact Person</th>
+                    <th className="pb-3 font-medium">Phone</th>
+                    <th className="pb-3 font-medium">Email</th>
+                    <th className="pb-3 font-medium">Address</th>
+                  </tr>
+                </thead>
+                <tbody className="text-slate-900 dark:text-white/80 text-sm">
+                  {supplierReports.map((supplier, idx) => (
+                    <tr key={idx} className="border-b border-black/5 dark:border-white/5 hover:bg-black/5 dark:bg-white/5 transition-colors">
+                      <td className="py-4 font-medium text-slate-900 dark:text-white">{supplier.name}</td>
+                      <td className="py-4 text-slate-500 dark:text-white/60">{supplier.contact_person}</td>
+                      <td className="py-4 text-slate-500 dark:text-white/60">{supplier.phone}</td>
+                      <td className="py-4 text-slate-500 dark:text-white/60">{supplier.email}</td>
+                      <td className="py-4 text-slate-500 dark:text-white/60">{supplier.address}</td>
+                    </tr>
+                  ))}
+                  {supplierReports.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="py-8 text-center text-slate-500 dark:text-white/40">No supplier data found.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'shifts' && (
+        <div className="flex-1 flex flex-col gap-6">
+          <div className="bg-black/5 dark:bg-white/5 backdrop-blur-xl border border-black/10 dark:border-white/10 rounded-3xl p-6 shadow-2xl overflow-hidden flex flex-col min-h-0">
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-6">Shift Accountability Reports</h2>
+            <div className="flex-1 overflow-x-auto custom-scrollbar">
+              <table className="w-full text-left border-collapse min-w-[800px]">
+                <thead>
+                  <tr className="text-slate-400 dark:text-white/40 text-sm border-b border-black/10 dark:border-white/10">
+                    <th className="pb-3 font-medium">Cashier</th>
+                    <th className="pb-3 font-medium">Start Time</th>
+                    <th className="pb-3 font-medium">End Time</th>
+                    <th className="pb-3 font-medium text-right">Expected Cash</th>
+                    <th className="pb-3 font-medium text-right">Actual Cash</th>
+                    <th className="pb-3 font-medium text-right">Difference</th>
+                    <th className="pb-3 font-medium">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="text-slate-900 dark:text-white/80 text-sm">
+                  {shifts.map((shift, idx) => {
+                    const diff = shift.ending_cash_actual - shift.ending_cash_expected;
+                    return (
+                      <tr key={idx} className="border-b border-black/5 dark:border-white/5 hover:bg-black/5 dark:bg-white/5 transition-colors">
+                        <td className="py-4 font-medium text-slate-900 dark:text-white">{shift.username}</td>
+                        <td className="py-4 text-slate-500 dark:text-white/60">{new Date(shift.start_time).toLocaleString()}</td>
+                        <td className="py-4 text-slate-500 dark:text-white/60">{shift.end_time ? new Date(shift.end_time).toLocaleString() : 'Active'}</td>
+                        <td className="py-4 text-right font-mono text-slate-900 dark:text-white">{formatCurrency(shift.ending_cash_expected || 0)}</td>
+                        <td className="py-4 text-right font-mono text-slate-900 dark:text-white">{formatCurrency(shift.ending_cash_actual || 0)}</td>
+                        <td className="py-4 text-right font-mono">
+                          {shift.end_time ? (
+                            <span className={diff === 0 ? 'text-emerald-400' : 'text-rose-400 font-bold'}>
+                              {diff > 0 ? '+' : ''}{formatCurrency(diff)}
+                            </span>
+                          ) : '-'}
+                        </td>
+                        <td className="py-4">
+                          {shift.end_time ? (
+                            <span className="px-2 py-1 rounded-lg bg-emerald-500/20 text-emerald-400 text-xs">Closed</span>
+                          ) : (
+                            <span className="px-2 py-1 rounded-lg bg-amber-500/20 text-amber-400 text-xs animate-pulse">Active</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {shifts.length === 0 && (
+                    <tr>
+                      <td colSpan={7} className="py-8 text-center text-slate-500 dark:text-white/40">No shift data found for this period.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
 
       {activeTab === 'expenses' && (
         <>
@@ -308,14 +568,26 @@ export default function Finance() {
             </div>
             
             <div className="flex gap-2 w-full md:w-auto">
-              <button onClick={exportPDF} className="flex-1 md:flex-none bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 px-4 py-2 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 text-sm border border-rose-500/20">
-                <Download className="w-4 h-4" /> PDF
+              <button 
+                onClick={exportPDF} 
+                disabled={isExporting}
+                className="flex-1 md:flex-none bg-rose-500/20 hover:bg-rose-500/30 disabled:opacity-50 text-rose-400 px-4 py-2 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 text-sm border border-rose-500/20"
+              >
+                <Download className={clsx("w-4 h-4", isExporting && "animate-bounce")} /> PDF
               </button>
-              <button onClick={exportExcel} className="flex-1 md:flex-none bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 px-4 py-2 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 text-sm border border-emerald-500/20">
-                <Download className="w-4 h-4" /> Excel
+              <button 
+                onClick={exportExcel} 
+                disabled={isExporting}
+                className="flex-1 md:flex-none bg-emerald-500/20 hover:bg-emerald-500/30 disabled:opacity-50 text-emerald-400 px-4 py-2 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 text-sm border border-emerald-500/20"
+              >
+                <Download className={clsx("w-4 h-4", isExporting && "animate-bounce")} /> Excel
               </button>
-              <button onClick={exportCSV} className="flex-1 md:flex-none bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-400 px-4 py-2 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 text-sm border border-indigo-500/20">
-                <Download className="w-4 h-4" /> CSV
+              <button 
+                onClick={exportCSV} 
+                disabled={isExporting}
+                className="flex-1 md:flex-none bg-indigo-500/20 hover:bg-indigo-500/30 disabled:opacity-50 text-indigo-400 px-4 py-2 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 text-sm border border-indigo-500/20"
+              >
+                <Download className={clsx("w-4 h-4", isExporting && "animate-bounce")} /> CSV
               </button>
             </div>
           </div>
@@ -413,14 +685,26 @@ export default function Finance() {
             </div>
             
             <div className="flex gap-2 w-full md:w-auto">
-              <button onClick={exportPDF} className="flex-1 md:flex-none bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 px-4 py-2 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 text-sm border border-rose-500/20">
-                <Download className="w-4 h-4" /> PDF
+              <button 
+                onClick={exportPDF} 
+                disabled={isExporting}
+                className="flex-1 md:flex-none bg-rose-500/20 hover:bg-rose-500/30 disabled:opacity-50 text-rose-400 px-4 py-2 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 text-sm border border-rose-500/20"
+              >
+                <Download className={clsx("w-4 h-4", isExporting && "animate-bounce")} /> PDF
               </button>
-              <button onClick={exportExcel} className="flex-1 md:flex-none bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 px-4 py-2 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 text-sm border border-emerald-500/20">
-                <Download className="w-4 h-4" /> Excel
+              <button 
+                onClick={exportExcel} 
+                disabled={isExporting}
+                className="flex-1 md:flex-none bg-emerald-500/20 hover:bg-emerald-500/30 disabled:opacity-50 text-emerald-400 px-4 py-2 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 text-sm border border-emerald-500/20"
+              >
+                <Download className={clsx("w-4 h-4", isExporting && "animate-bounce")} /> Excel
               </button>
-              <button onClick={exportCSV} className="flex-1 md:flex-none bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-400 px-4 py-2 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 text-sm border border-indigo-500/20">
-                <Download className="w-4 h-4" /> CSV
+              <button 
+                onClick={exportCSV} 
+                disabled={isExporting}
+                className="flex-1 md:flex-none bg-indigo-500/20 hover:bg-indigo-500/30 disabled:opacity-50 text-indigo-400 px-4 py-2 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 text-sm border border-indigo-500/20"
+              >
+                <Download className={clsx("w-4 h-4", isExporting && "animate-bounce")} /> CSV
               </button>
             </div>
           </div>
@@ -465,6 +749,66 @@ export default function Finance() {
             </div>
           </div>
         </div>
+      )}
+
+      {activeTab === 'cashiers' && (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 flex-1 flex flex-col min-h-0">
+          <div className="bg-black/5 dark:bg-white/5 backdrop-blur-xl border border-black/10 dark:border-white/10 rounded-3xl p-6 shadow-2xl overflow-hidden flex flex-col min-h-0">
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-6">{t.cashierPerformance || "Cashier Performance"}</h2>
+            <div className="flex-1 overflow-x-auto custom-scrollbar">
+              <table className="w-full text-left border-collapse min-w-[600px]">
+                <thead>
+                  <tr className="text-slate-400 dark:text-white/40 text-sm border-b border-black/10 dark:border-white/10">
+                    <th className="pb-3 font-medium">{t.cashier}</th>
+                    <th className="pb-3 font-medium text-right">{t.transactions}</th>
+                    <th className="pb-3 font-medium text-right">{t.revenue}</th>
+                    <th className="pb-3 font-medium text-right">{t.avgTransaction || "Avg. Transaction"}</th>
+                  </tr>
+                </thead>
+                <tbody className="text-slate-900 dark:text-white/80 text-sm">
+                  {cashierPerformance.map((perf, idx) => (
+                    <tr 
+                      key={idx} 
+                      onClick={() => fetchCashierDetails(perf)}
+                      className="border-b border-black/5 dark:border-white/5 hover:bg-black/5 dark:bg-white/5 transition-colors cursor-pointer group"
+                    >
+                      <td className="py-4 font-medium text-slate-900 dark:text-white flex items-center gap-2">
+                        {perf.username}
+                        <ChevronRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity text-amber-500" />
+                      </td>
+                      <td className="py-4 text-right font-mono text-slate-900 dark:text-white">{perf.total_transactions}</td>
+                      <td className="py-4 text-right font-mono text-emerald-500 dark:text-emerald-400">{formatCurrency(perf.total_revenue)}</td>
+                      <td className="py-4 text-right font-mono text-slate-900 dark:text-white">
+                        {formatCurrency(perf.total_revenue / perf.total_transactions)}
+                      </td>
+                    </tr>
+                  ))}
+                  {cashierPerformance.length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="py-8 text-center text-slate-500 dark:text-white/40">{t.noDataFound}</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="h-80 bg-black/5 dark:bg-white/5 backdrop-blur-xl border border-black/10 dark:border-white/10 rounded-3xl p-6 shadow-2xl shrink-0">
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-6">{t.revenueByCashier || "Revenue by Cashier"}</h3>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={cashierPerformance}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+                <XAxis dataKey="username" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `Rp ${value.toLocaleString()}`} />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '12px', color: '#fff' }}
+                  formatter={(value: number) => [formatCurrency(value), t.revenue]}
+                />
+                <Bar dataKey="total_revenue" fill="#f59e0b" radius={[10, 10, 0, 0]} barSize={40} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </motion.div>
       )}
 
       {showAddModal && (
@@ -675,6 +1019,68 @@ export default function Finance() {
               >
                 {t.delete}
               </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+      {/* Cashier Details Modal */}
+      {selectedCashier && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white dark:bg-slate-900 border border-black/10 dark:border-white/10 rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"
+          >
+            <div className="p-6 border-b border-black/10 dark:border-white/10 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
+              <div>
+                <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{selectedCashier.username} - {t.cashierPerformance}</h2>
+                <p className="text-slate-500 dark:text-white/60 mt-1">{dateRange.startDate} - {dateRange.endDate}</p>
+              </div>
+              <button onClick={() => setSelectedCashier(null)} className="text-slate-400 dark:text-white/40 hover:text-slate-900 dark:text-white transition-colors">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto flex-1 custom-scrollbar">
+              {loadingCashierDetails ? (
+                <div className="flex justify-center py-12">
+                  <div className="w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {cashierDetails.length === 0 ? (
+                    <p className="text-center py-12 text-slate-500 dark:text-white/40">{t.noTransactionsFound || 'No transactions found for this cashier in the selected range.'}</p>
+                  ) : (
+                    <div className="space-y-4">
+                      {cashierDetails.map((tx: any) => (
+                        <div key={tx.id} className="bg-slate-50 dark:bg-white/5 rounded-2xl p-4 border border-black/5 dark:border-white/5">
+                          <div className="flex justify-between items-start mb-3">
+                            <div>
+                              <p className="text-sm font-bold text-slate-900 dark:text-white">#{tx.id}</p>
+                              <p className="text-xs text-slate-500 dark:text-white/40">{new Date(tx.created_at).toLocaleString()}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-sm font-bold text-amber-500">Rp {tx.final_amount.toLocaleString()}</p>
+                              <p className="text-[10px] uppercase tracking-wider text-slate-400">{tx.payment_method} • {tx.channel}</p>
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            {tx.items.map((item: any, idx: number) => (
+                              <div key={idx} className="flex justify-between text-sm">
+                                <div className="flex gap-2">
+                                  <span className="text-slate-400">{item.qty}x</span>
+                                  <span className="text-slate-700 dark:text-white/80">{item.product_name}</span>
+                                </div>
+                                <span className="text-slate-900 dark:text-white font-medium">Rp {(item.qty * item.unit_price).toLocaleString()}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </motion.div>
         </div>

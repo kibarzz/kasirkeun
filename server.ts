@@ -5,12 +5,23 @@ import path from 'path';
 import fs from 'fs';
 import multer from 'multer';
 
-// Ensure uploads directory exists
-if (!fs.existsSync('uploads')) {
-  fs.mkdirSync('uploads');
-}
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    if (!fs.existsSync('uploads')) {
+      fs.mkdirSync('uploads');
+    }
+    cb(null, 'uploads/');
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
 
-const upload = multer({ dest: 'uploads/' });
+const upload = multer({ 
+  storage: storage,
+  limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
+});
 
 async function startServer() {
   await initDB();
@@ -239,8 +250,134 @@ async function startServer() {
     res.json({ success: true });
   });
 
+  // Supplier Endpoints
+  app.get('/api/suppliers', async (req, res) => {
+    try {
+      const result = await db.execute('SELECT * FROM suppliers ORDER BY name ASC');
+      res.json(result.rows);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch suppliers' });
+    }
+  });
+
+  app.post('/api/suppliers', async (req, res) => {
+    const { name, contact_person, phone, email, address } = req.body;
+    try {
+      const result = await db.execute({
+        sql: 'INSERT INTO suppliers (name, contact_person, phone, email, address) VALUES (?, ?, ?, ?, ?)',
+        args: [name, contact_person, phone, email, address]
+      });
+      res.json({ id: Number(result.lastInsertRowid) });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to create supplier' });
+    }
+  });
+
+  app.put('/api/suppliers/:id', async (req, res) => {
+    const { id } = req.params;
+    const { name, contact_person, phone, email, address } = req.body;
+    try {
+      await db.execute({
+        sql: 'UPDATE suppliers SET name = ?, contact_person = ?, phone = ?, email = ?, address = ? WHERE id = ?',
+        args: [name, contact_person, phone, email, address, id]
+      });
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to update supplier' });
+    }
+  });
+
+  app.delete('/api/suppliers/:id', async (req, res) => {
+    try {
+      await db.execute({ sql: 'UPDATE ingredients SET supplier_id = NULL WHERE supplier_id = ?', args: [req.params.id] });
+      await db.execute({ sql: 'DELETE FROM suppliers WHERE id = ?', args: [req.params.id] });
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to delete supplier' });
+    }
+  });
+
+  // Shift Endpoints
+  app.get('/api/shifts/current', async (req, res) => {
+    const userId = req.query.userId as string;
+    try {
+      const result = await db.execute({
+        sql: 'SELECT * FROM shifts WHERE user_id = ? AND status = "open" LIMIT 1',
+        args: [userId]
+      });
+      res.json(result.rows[0] || null);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch current shift' });
+    }
+  });
+
+  app.post('/api/shifts/start', async (req, res) => {
+    const { user_id, starting_cash, notes } = req.body;
+    try {
+      const result = await db.execute({
+        sql: 'INSERT INTO shifts (user_id, starting_cash, notes, status) VALUES (?, ?, ?, "open")',
+        args: [user_id, starting_cash, notes]
+      });
+      res.json({ id: Number(result.lastInsertRowid) });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to start shift' });
+    }
+  });
+
+  app.post('/api/shifts/end', async (req, res) => {
+    const { id, ending_cash_actual, notes } = req.body;
+    try {
+      // Calculate expected cash
+      const shiftRes = await db.execute({ sql: 'SELECT * FROM shifts WHERE id = ?', args: [id] });
+      const shift = shiftRes.rows[0];
+      
+      const salesRes = await db.execute({
+        sql: `
+          SELECT SUM(final_amount) as total_sales
+          FROM transactions
+          WHERE shift_id = ? AND payment_method LIKE '%Cash%' AND type = 'paid'
+        `,
+        args: [id]
+      });
+      const totalSales = Number(salesRes.rows[0]?.total_sales || 0);
+      const expectedCash = Number(shift.starting_cash) + totalSales;
+
+      await db.execute({
+        sql: 'UPDATE shifts SET end_time = CURRENT_TIMESTAMP, ending_cash_actual = ?, ending_cash_expected = ?, status = "closed", notes = ? WHERE id = ?',
+        args: [ending_cash_actual, expectedCash, notes, id]
+      });
+      res.json({ success: true, expectedCash });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to end shift' });
+    }
+  });
+
+  app.get('/api/shifts', async (req, res) => {
+    const startDate = req.query.startDate as string;
+    const endDate = req.query.endDate as string;
+    try {
+      const result = await db.execute({
+        sql: `
+          SELECT s.*, u.username as cashier
+          FROM shifts s
+          JOIN users u ON s.user_id = u.id
+          WHERE DATE(s.start_time) >= ? AND DATE(s.start_time) <= ?
+          ORDER BY s.start_time DESC
+        `,
+        args: [startDate, endDate]
+      });
+      res.json(result.rows);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch shifts' });
+    }
+  });
+
   app.get('/api/ingredients', async (req, res) => {
-    const ingredientsRes = await db.execute('SELECT * FROM ingredients');
+    const ingredientsRes = await db.execute(`
+      SELECT i.*, s.name as supplier_name 
+      FROM ingredients i
+      LEFT JOIN suppliers s ON i.supplier_id = s.id
+    `);
     res.json(ingredientsRes.rows);
   });
 
@@ -371,6 +508,34 @@ async function startServer() {
     } catch (error) {
       console.error('Error updating variant:', error);
       res.status(500).json({ error: 'Failed to update variant' });
+    }
+  });
+
+  app.post('/api/variants', async (req, res) => {
+    const { product_id, name, dine_in_price, online_price, dine_in_discount, online_discount } = req.body;
+    try {
+      const info = await db.execute({
+        sql: 'INSERT INTO product_variants (product_id, name, dine_in_price, online_price, dine_in_discount, online_discount) VALUES (?, ?, ?, ?, ?, ?)',
+        args: [product_id, name, dine_in_price, online_price, dine_in_discount || 0, online_discount || 0]
+      });
+      res.json({ id: Number(info.lastInsertRowid) });
+    } catch (error) {
+      console.error('Error adding variant:', error);
+      res.status(500).json({ error: 'Failed to add variant' });
+    }
+  });
+
+  app.delete('/api/variants/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+      await db.batch([
+        { sql: 'DELETE FROM recipes WHERE product_variant_id = ?', args: [id] },
+        { sql: 'DELETE FROM product_variants WHERE id = ?', args: [id] }
+      ], 'write');
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting variant:', error);
+      res.status(500).json({ error: 'Failed to delete variant' });
     }
   });
 
@@ -522,14 +687,37 @@ async function startServer() {
   });
 
   app.post('/api/transactions', async (req, res) => {
-    const { customer_id, user_id, total_amount, tax_amount, discount_amount, final_amount, payment_method, channel, type, items, redeem_loyalty, payment_proof_url, applied_promotion_ids } = req.body;
+    const { 
+      customer_id, user_id, total_amount, tax_amount, discount_amount, 
+      final_amount, payment_method, channel, type, items, 
+      redeem_loyalty, payment_proof_url, applied_promotion_ids,
+      shift_id, points_earned, points_redeemed
+    } = req.body;
     
     try {
       const info = await db.execute({
-        sql: 'INSERT INTO transactions (customer_id, user_id, total_amount, tax_amount, discount_amount, final_amount, payment_method, channel, type, status, payment_proof_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        args: [customer_id, user_id, total_amount, tax_amount, discount_amount, final_amount, payment_method, channel, type, 'completed', payment_proof_url || null]
+        sql: `
+          INSERT INTO transactions (
+            customer_id, user_id, total_amount, tax_amount, discount_amount, 
+            final_amount, payment_method, channel, type, status, 
+            payment_proof_url, shift_id, points_earned, points_redeemed
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `,
+        args: [
+          customer_id, user_id, total_amount, tax_amount, discount_amount, 
+          final_amount, payment_method, channel, type, 'completed', 
+          payment_proof_url || null, shift_id || null, points_earned || 0, points_redeemed || 0
+        ]
       });
       const txId = Number(info.lastInsertRowid);
+
+      // Update customer points
+      if (customer_id) {
+        await db.execute({
+          sql: 'UPDATE customers SET points = points + ? - ? WHERE id = ?',
+          args: [points_earned || 0, points_redeemed || 0, customer_id]
+        });
+      }
       
       for (const item of items) {
         // Calculate HPP snapshot for this item using FIFO
@@ -775,9 +963,10 @@ async function startServer() {
       const lowStockRes = await db.execute('SELECT name, stock, min_stock FROM ingredients WHERE stock <= min_stock');
       
       const recentTransactionsRes = await db.execute(`
-        SELECT id, created_at, type, payment_method, final_amount, status 
-        FROM transactions 
-        ORDER BY id DESC 
+        SELECT t.id, t.created_at, t.type, t.payment_method, t.final_amount, t.status, u.username as cashier_name
+        FROM transactions t
+        LEFT JOIN users u ON t.user_id = u.id
+        ORDER BY t.id DESC 
         LIMIT 10
       `);
 
@@ -954,6 +1143,8 @@ async function startServer() {
         DATE(t.created_at) as date,
         COUNT(t.id) as transactions,
         SUM(t.final_amount) as revenue,
+        SUM(t.tax_amount) as tax,
+        SUM(t.discount_amount) as discount,
         SUM((
           SELECT COALESCE(SUM(ti.qty * ti.hpp_snapshot), 0)
           FROM transaction_items ti
@@ -992,6 +1183,68 @@ async function startServer() {
     }
   });
 
+  app.get('/api/cashier-performance', async (req, res) => {
+    const startDate = req.query.startDate as string;
+    const endDate = req.query.endDate as string;
+    try {
+      const performanceRes = await db.execute({
+        sql: `
+          SELECT u.id, u.username, COUNT(t.id) as total_transactions, SUM(t.final_amount) as total_revenue
+          FROM transactions t
+          JOIN users u ON t.user_id = u.id
+          WHERE DATE(t.created_at) >= ? AND DATE(t.created_at) <= ?
+          GROUP BY u.id
+          ORDER BY total_revenue DESC
+        `,
+        args: [startDate, endDate]
+      });
+      res.json(performanceRes.rows);
+    } catch (error) {
+      console.error('Error fetching cashier performance:', error);
+      res.status(500).json({ error: 'Failed to fetch cashier performance' });
+    }
+  });
+
+  app.get('/api/cashier-performance/details', async (req, res) => {
+    const userId = req.query.userId as string;
+    const startDate = req.query.startDate as string;
+    const endDate = req.query.endDate as string;
+    try {
+      const transactionsRes = await db.execute({
+        sql: `
+          SELECT t.id, t.final_amount, t.created_at, t.payment_method, t.channel, t.status
+          FROM transactions t
+          WHERE t.user_id = ? AND DATE(t.created_at) >= ? AND DATE(t.created_at) <= ? AND t.type = 'paid'
+          ORDER BY t.created_at DESC
+        `,
+        args: [userId, startDate, endDate]
+      });
+      const transactions = transactionsRes.rows;
+
+      const itemsRes = await db.execute({
+        sql: `
+          SELECT ti.transaction_id, pv.name as product_name, ti.qty, ti.unit_price, ti.notes, ti.modifiers
+          FROM transaction_items ti
+          JOIN transactions t ON ti.transaction_id = t.id
+          JOIN product_variants pv ON ti.product_variant_id = pv.id
+          WHERE t.user_id = ? AND DATE(t.created_at) >= ? AND DATE(t.created_at) <= ? AND t.type = 'paid'
+        `,
+        args: [userId, startDate, endDate]
+      });
+      const items = itemsRes.rows;
+
+      const transactionsWithItems = transactions.map((tx: any) => ({
+        ...tx,
+        items: items.filter((item: any) => item.transaction_id === tx.id)
+      }));
+
+      res.json(transactionsWithItems);
+    } catch (error) {
+      console.error('Error fetching cashier performance details:', error);
+      res.status(500).json({ error: 'Failed to fetch cashier performance details' });
+    }
+  });
+
   app.get('/api/sales-report/details', async (req, res) => {
     const date = req.query.date as string;
     if (!date) return res.status(400).json({ error: 'Date is required' });
@@ -999,7 +1252,10 @@ async function startServer() {
     try {
       const transactionsRes = await db.execute({
         sql: `
-          SELECT t.id, t.final_amount, t.created_at, u.username as cashier, t.payment_method, t.channel
+          SELECT 
+            t.id, t.total_amount, t.tax_amount, t.discount_amount, 
+            t.final_amount, t.created_at, u.username as cashier, 
+            t.payment_method, t.channel, t.points_earned, t.points_redeemed
           FROM transactions t
           LEFT JOIN users u ON t.user_id = u.id
           WHERE DATE(t.created_at) = ? AND t.type = 'paid'
@@ -1029,6 +1285,51 @@ async function startServer() {
     } catch (error) {
       console.error('Error fetching sales report details:', error);
       res.status(500).json({ error: 'Failed to fetch sales report details' });
+    }
+  });
+
+  app.get('/api/sales-report/full-export', async (req, res) => {
+    const startDate = req.query.startDate as string;
+    const endDate = req.query.endDate as string;
+    try {
+      const transactionsRes = await db.execute({
+        sql: `
+          SELECT 
+            t.id, t.total_amount, t.tax_amount, t.discount_amount, 
+            t.final_amount, t.created_at, u.username as cashier, 
+            t.payment_method, t.channel, c.name as customer_name,
+            t.points_earned, t.points_redeemed
+          FROM transactions t
+          LEFT JOIN users u ON t.user_id = u.id
+          LEFT JOIN customers c ON t.customer_id = c.id
+          WHERE DATE(t.created_at) >= ? AND DATE(t.created_at) <= ? AND t.type = 'paid'
+          ORDER BY t.created_at DESC
+        `,
+        args: [startDate, endDate]
+      });
+      const transactions = transactionsRes.rows;
+
+      const itemsRes = await db.execute({
+        sql: `
+          SELECT ti.transaction_id, pv.name as product_name, ti.qty, ti.unit_price, ti.hpp_snapshot, ti.notes, ti.modifiers
+          FROM transaction_items ti
+          JOIN product_variants pv ON ti.product_variant_id = pv.id
+          JOIN transactions t ON ti.transaction_id = t.id
+          WHERE DATE(t.created_at) >= ? AND DATE(t.created_at) <= ? AND t.type = 'paid'
+        `,
+        args: [startDate, endDate]
+      });
+      const items = itemsRes.rows;
+
+      const details = transactions.map((t: any) => ({
+        ...t,
+        items: items.filter((i: any) => i.transaction_id === t.id)
+      }));
+
+      res.json(details);
+    } catch (error) {
+      console.error('Error fetching full sales report:', error);
+      res.status(500).json({ error: 'Failed to fetch full sales report' });
     }
   });
 
